@@ -6,62 +6,230 @@ const openai = new OpenAI({
   baseURL: process.env.OPENAI_API_ENDPOINT,
 });
 
-export interface NVCDecomposition {
-  observation: string;
-  feeling: string;
-  need: string;
-  request: string;
-  improvements: {
-    observation?: string[];
-    feeling?: string[];
-    need?: string[];
-    request?: string[];
+// 学习笔记分析结果接口
+export interface LearningNoteAnalysis {
+  title: string;
+  category: string;
+  keywords: string[];
+  importance: number;
+  confidence: number;
+  related_topics: string[];
+  summary: string;
+  suggested_tags: string[];
+  // 新增主题相关字段
+  recommended_topic: {
+    name: string;
+    description: string;
+    confidence: number; // 0-1，推荐该主题的置信度
+    is_new: boolean; // 是否为新创建的主题
+    existing_topic_id?: string; // 如果匹配到现有主题，返回ID
   };
-  overall_feedback: string;
-  score: number; // 1-10 分评分
 }
 
-export async function decomposeToNVC(
-  originalText: string
-): Promise<NVCDecomposition> {
+
+
+// 分析学习笔记内容
+export async function analyzeLearningNote(
+  content: string,
+  existingTopics: { id: string; name: string; description?: string; categories: string[] }[] = [],
+  existingCategories: string[] = []
+): Promise<LearningNoteAnalysis> {
   try {
+    const existingTopicsText = existingTopics.length > 0 
+      ? existingTopics.map(t => `ID: ${t.id}, 名称: ${t.name}, 描述: ${t.description || '无描述'}`).join('\n')
+      : '无';
+
     const prompt = `
-你好！我是倾听小猫🐱，一只专门帮助大家改善沟通的温暖小猫。我擅长把那些听起来不太友好的话，变成更暖心、更有效的表达方式。
+你是一个智能学习助手，擅长分析和整理学习笔记内容。请分析以下学习内容：
 
-你刚刚说的话是：${originalText}
+内容：${content}
 
-作为你的沟通小助手，我会帮你重新整理这句话，让它听起来更温暖，也更容易被对方接受。我会从四个角度来帮你：
+现有学习主题：
+${existingTopicsText}
 
-请按照以下格式返回JSON，确保每个部分都很详细（每部分至少50字）：
+现有分类：${existingCategories.join(", ") || "无"}
+
+请按照以下JSON格式返回分析结果：
 
 {
-  "observation": "我们先来看看到底发生了什么事情。我会用最客观的方式描述当时的情况，就像一台录像机一样，只记录看到的、听到的事实，不加任何个人判断",
-  "feeling": "然后我们聊聊你的真实感受。你心里可能有很多复杂的情绪，比如生气的背后可能还有失望、担心或者委屈。我会帮你准确地说出这些感受",
-  "need": "接下来我们深挖一下，你真正需要的是什么。每个人都有一些基本的需要，比如被理解、被尊重、安全感等等。我会帮你找到你最核心的需要",
-  "request": "最后，我们想想怎么说出你的期待。我会建议2-3个具体可行的方法，告诉对方你希望他们怎么做，这样大家都更清楚，关系也会更好",
-  "improvements": {
-    "observation": ["3-4个贴心提示：怎么去掉那些听起来像批评的词，用更中性的方式描述事情"],
-    "feeling": ["3-4个感受表达小技巧：怎么区分想法和感受，怎么表达复杂的情绪"],
-    "need": ["3-4个需求挖掘建议：怎么从表面的要求深入到内心真正的需要"],
-    "request": ["3-4个请求优化技巧：怎么让你的期待更清楚、更容易实现"]
-  },
-  "overall_feedback": "至少150字的温暖反馈，包括：1）夸夸你敢于表达的勇气 2）分析这种沟通情况很常见，你不是一个人 3）举些类似的例子（工作、家庭、朋友间的相似情况）4）解释为什么温暖沟通这么重要 5）给你一些鼓励和继续练习的建议",
-  "score": 8 (根据提问内容打分，满分10分)
+  "title": "为这个学习内容生成一个简洁有意义的标题（10-20字）",
+  "category": "选择最合适的分类（如果有已有分类就从中选择，否则创建新的）",
+  "keywords": ["提取3-5个关键词"],
+  "importance": 4,
+  "confidence": 0.85,
+  "related_topics": ["相关的学习主题"],
+  "summary": "用1-2句话总结核心要点",
+  "suggested_tags": ["建议的标签"],
+  "recommended_topic": {
+    "name": "主题名称",
+    "description": "主题描述（简洁明了）",
+    "confidence": 0.85,
+    "is_new": false,
+    "existing_topic_id": "如果匹配到现有主题则填写其ID，否则为null"
+  }
 }
 
-我的分析要点：
-1. 观察：像小猫一样敏锐地捕捉事实，去掉"总是"、"从不"、"很烦人"这些带情绪的词
-2. 感受：温柔地理解你的情绪，帮你说出那些藏在愤怒背后的真实感受
-3. 需要：像知心朋友一样，帮你找到内心真正渴望的东西，比如理解、尊重、关爱
-4. 请求：用最暖心的方式，建议你怎么跟对方沟通，让大家都舒服
+主题匹配规则：
+1. 仔细分析内容，判断是否属于现有学习主题
+2. 如果内容明显属于某个现有主题，设置is_new为false，并提供existing_topic_id
+3. 如果内容不属于任何现有主题，创建新主题，设置is_new为true，existing_topic_id为null
+4. 如果不确定，优先匹配最相关的现有主题
+5. 新主题名称应该简洁（2-6个字），描述应该准确概括主题范围
 
-评分说明（1-10分）：
-- 有多准确地理解你的意思（30%）
-- 有多深入地挖掘你的真实需要（30%）
-- 四个建议有多实用（25%）
-- 改进提示有多具体可行（15%）
+分析要求：
+1. 识别学习领域（技能、理论、实践等）
+2. 提取核心概念和关键信息
+3. 评估内容的重要程度（1-5分）
+4. 给出分类置信度（0-1之间）
+5. 推荐相关主题和标签
+6. 智能匹配或创建学习主题
 
-我会用最温暖、最理解的方式跟你交流，让你感受到被关心和支持。毕竟，每个人都值得被温柔以待呀~🐱
+如果内容不够明确或太简短，confidence应该较低（<0.7），建议默认分类为"默认"。
+`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4.1",
+      messages: [
+        {
+          role: "system",
+          content: "你是一个专业的学习内容分析专家，擅长智能分类和信息提取。",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.3,
+      max_tokens: 1000,
+    });
+
+    const responseContent = response.choices[0]?.message?.content;
+    if (!responseContent) {
+      throw new Error("AI分析返回为空");
+    }
+
+    let cleanContent = responseContent.trim();
+    if (cleanContent.startsWith("```json")) {
+      cleanContent = cleanContent
+        .replace(/^```json\s*/, "")
+        .replace(/\s*```$/, "");
+    } else if (cleanContent.startsWith("```")) {
+      cleanContent = cleanContent.replace(/^```\s*/, "").replace(/\s*```$/, "");
+    }
+
+    const analysis = JSON.parse(cleanContent) as LearningNoteAnalysis;
+
+    // 验证必要字段
+    if (!analysis.title || !analysis.category) {
+      throw new Error("AI分析结果缺少必要字段");
+    }
+
+    // 设置默认值
+    return {
+      title: analysis.title,
+      category: analysis.category || "默认",
+      keywords: analysis.keywords || [],
+      importance: Math.min(5, Math.max(1, analysis.importance || 3)),
+      confidence: Math.min(1, Math.max(0, analysis.confidence || 0.5)),
+      related_topics: analysis.related_topics || [],
+      summary: analysis.summary || "",
+      suggested_tags: analysis.suggested_tags || [],
+    };
+  } catch (error) {
+    console.error("学习笔记分析失败:", error);
+    // 返回默认分析结果
+    return {
+      title: "学习笔记",
+      category: "默认",
+      keywords: [],
+      importance: 3,
+      confidence: 0.5,
+      related_topics: [],
+      summary: "AI分析暂时不可用，已保存到默认分类",
+      suggested_tags: [],
+    };
+  }
+}
+
+// 语音转文字（使用OpenAI Whisper）
+export async function transcribeAudio(
+  audioBuffer: Buffer,
+  language = "zh"
+): Promise<{
+  text: string;
+  language: string;
+  confidence: number;
+  segments?: Array<{
+    start: number;
+    end: number;
+    text: string;
+  }>;
+}> {
+  try {
+    // 创建一个FormData对象来上传音频文件
+    const formData = new FormData();
+    const audioFile = new File([audioBuffer], "audio.webm", {
+      type: "audio/webm",
+    });
+    formData.append("file", audioFile);
+    formData.append("model", "whisper-1");
+    formData.append("language", language);
+    formData.append("response_format", "verbose_json");
+
+    const response = await openai.audio.transcriptions.create({
+      file: audioFile,
+      model: "whisper-1",
+      language: language,
+      response_format: "verbose_json",
+    });
+
+    return {
+      text: response.text,
+      language: language,
+      confidence: 0.9, // Whisper一般有较高的准确度
+      segments: response.segments?.map((seg) => ({
+        start: seg.start,
+        end: seg.end,
+        text: seg.text,
+      })),
+    };
+  } catch (error) {
+    console.error("语音转写失败:", error);
+    throw new Error("语音转写服务暂时不可用");
+  }
+}
+
+// 从转写文本中提取关键信息
+export async function extractKeyPointsFromTranscript(
+  transcript: string,
+  context?: string
+): Promise<{
+  keyPoints: string[];
+  actionItems: string[];
+  questions: string[];
+  summary: string;
+}> {
+  try {
+    const prompt = `
+请分析以下语音转写内容，提取关键信息：
+
+转写内容：${transcript}
+${context ? `上下文：${context}` : ""}
+
+请按照JSON格式返回：
+
+{
+  "keyPoints": ["关键要点1", "关键要点2"],
+  "actionItems": ["需要练习的动作或要点"],
+  "questions": ["需要进一步了解的问题"],
+  "summary": "整体总结"
+}
+
+要求：
+1. 识别重要的技术要点或概念
+2. 提取可操作的练习项目
+3. 发现疑问或需要深入的地方
+4. 生成简洁的总结
 `;
 
     const response = await openai.chat.completions.create({
@@ -70,138 +238,44 @@ export async function decomposeToNVC(
         {
           role: "system",
           content:
-            "你是一位温暖、专业的非暴力沟通教练，擅长帮助人们将日常表达转换为更加温和有效的沟通方式。",
+            "你是一个学习内容分析专家，擅长从语音记录中提取关键学习要点。",
         },
         {
           role: "user",
           content: prompt,
         },
       ],
-      temperature: 0.7,
-      max_tokens: 2000,
-    });
-
-    const content = response.choices[0]?.message?.content;
-
-    console.log(content);
-
-    if (!content) {
-      throw new Error("OpenAI 返回为空");
-    }
-
-    // 尝试解析 JSON
-    try {
-      // 先清理可能的格式问题
-      let cleanContent = content.trim();
-
-      // 如果内容被 markdown 代码块包围，提取实际 JSON
-      if (cleanContent.startsWith("```json")) {
-        cleanContent = cleanContent
-          .replace(/^```json\s*/, "")
-          .replace(/\s*```$/, "");
-      } else if (cleanContent.startsWith("```")) {
-        cleanContent = cleanContent
-          .replace(/^```\s*/, "")
-          .replace(/\s*```$/, "");
-      }
-
-      const parsed = JSON.parse(cleanContent) as NVCDecomposition;
-
-      // 验证必要字段是否存在
-      if (
-        !parsed.observation ||
-        !parsed.feeling ||
-        !parsed.need ||
-        !parsed.request
-      ) {
-        throw new Error("JSON 缺少必要字段");
-      }
-
-      return parsed;
-    } catch (parseError) {
-      console.error("JSON 解析失败:", parseError, "原始内容:", content);
-      throw parseError;
-    }
-  } catch (error) {
-    console.error("OpenAI API 调用失败:", error);
-    throw new Error("AI 分析服务暂时不可用，请稍后重试");
-  }
-}
-
-// 基于NVC上下文回答问题
-export async function answerContextQuestion(
-  nvcSession: any,
-  question: string,
-  previousQAs?: Array<{ question: string; answer: string }>
-) {
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    baseURL: process.env.OPENAI_API_ENDPOINT,
-  });
-
-  // 构建上下文
-  let context = `用户的原始表达：${nvcSession.original_text}\n\n`;
-  context += `结果：\n`;
-  context += `观察：${nvcSession.observation}\n`;
-  context += `感受：${nvcSession.feeling}\n`;
-  context += `需要：${nvcSession.need}\n`;
-  context += `请求：${nvcSession.request}\n\n`;
-
-  if (nvcSession.ai_feedback?.overall_feedback) {
-    context += `AI分析：${nvcSession.ai_feedback.overall_feedback}\n\n`;
-  }
-
-  // 添加之前的问答历史
-  if (previousQAs && previousQAs.length > 0) {
-    context += `之前的问答记录：\n`;
-    previousQAs.forEach((qa, index) => {
-      context += `Q${index + 1}: ${qa.question}\n`;
-      context += `A${index + 1}: ${qa.answer}\n\n`;
-    });
-  }
-
-  const prompt = `
-喵~我是倾听小猫！🐱 我刚刚帮你分析了你的话，现在你又有新问题要问我啦~
-
-你的问题是：${question}
-
-作为你的温暖小助手，我会：
-1. 基于我们刚才的聊天内容来回答你
-2. 用最温暖、最贴心的方式跟你交流
-3. 如果问题跟沟通有关，我会给你实用的小建议
-4. 如果问题跑题了，我会温柔地拉回到我们的沟通话题上
-5. 用简单易懂的话跟你说，不会太长也不会太短
-6. 就像朋友聊天一样自然
-
-我会直接回答你，不用什么固定格式，就像两个朋友在聊天一样温暖自然~
-`;
-
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4.1",
-      messages: [
-        {
-          role: "system",
-          content: context,
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+      temperature: 0.3,
       max_tokens: 800,
-      temperature: 0.7,
     });
 
-    const answer = completion.choices[0]?.message?.content?.trim();
-
-    if (!answer) {
-      throw new Error("AI未能生成回答");
+    const responseContent = response.choices[0]?.message?.content;
+    if (!responseContent) {
+      throw new Error("关键信息提取失败");
     }
 
-    return answer;
+    let cleanContent = responseContent.trim();
+    if (cleanContent.startsWith("```json")) {
+      cleanContent = cleanContent
+        .replace(/^```json\s*/, "")
+        .replace(/\s*```$/, "");
+    }
+
+    const result = JSON.parse(cleanContent);
+
+    return {
+      keyPoints: result.keyPoints || [],
+      actionItems: result.actionItems || [],
+      questions: result.questions || [],
+      summary: result.summary || "无法生成摘要",
+    };
   } catch (error) {
-    console.error("问答生成失败:", error);
-    throw new Error("抱歉，AI暂时无法回答您的问题，请稍后再试。");
+    console.error("关键信息提取失败:", error);
+    return {
+      keyPoints: [],
+      actionItems: [],
+      questions: [],
+      summary: "关键信息提取暂时不可用",
+    };
   }
 }

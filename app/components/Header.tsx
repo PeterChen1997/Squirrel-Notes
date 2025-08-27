@@ -1,35 +1,135 @@
-import { Link, useLocation } from "@remix-run/react";
+import { Link, useLocation, Form } from "@remix-run/react";
 
-export default function Header() {
+interface User {
+  id?: string;
+  email: string;
+  name?: string;
+  avatar_url?: string;
+}
+
+interface HeaderProps {
+  user?: User;
+  isDemo?: boolean;
+}
+
+export default function Header({ user, isDemo = false }: HeaderProps) {
   const location = useLocation();
-  const isHomePage = location.pathname === "/";
+
+  const isActiveLink = (path: string) => {
+    if (path === "/" && location.pathname === "/") return true;
+    if (path !== "/" && location.pathname.startsWith(path)) return true;
+    return false;
+  };
 
   return (
-    <header className="bg-white/80 backdrop-blur-xl border-b border-white/20 sticky top-0 z-40">
-      <div className="max-w-4xl mx-auto px-6 py-4">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
+    <nav className="px-6 py-4 border-b border-amber-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+      <div className="flex justify-between items-center max-w-6xl mx-auto">
+        {/* 左侧Logo和标题 */}
+        <Link to="/" className="flex items-center space-x-3 group">
+          <div className="text-2xl transition-transform group-hover:scale-110">
+            🐿️
+          </div>
+          <h1 className="text-xl font-bold text-amber-900">松鼠随记</h1>
+          <div className="text-sm text-amber-600 font-medium">勤奋收集知识</div>
+        </Link>
+
+        {/* 右侧内容 */}
+        <div className="flex items-center space-x-4">
+          {/* Demo提示 */}
+          {isDemo && (
+            <div className="hidden sm:flex items-center bg-amber-200/50 px-3 py-1 rounded-full text-xs text-amber-700">
+              <span className="mr-1">👀</span>
+              正在浏览示例内容
+            </div>
+          )}
+
+          {/* 导航链接 */}
           <Link
             to="/"
-            className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+            className={`font-medium flex items-center space-x-1 px-3 py-2 rounded-lg transition-all ${
+              isActiveLink("/")
+                ? "bg-amber-100 text-amber-900"
+                : "text-amber-700 hover:text-amber-900 hover:bg-amber-50"
+            }`}
           >
-            <div className="text-2xl">🐈</div>
-            <span className="text-lg font-bold text-gray-900">倾听小猫</span>
+            <span>📝</span>
+            <span>记录</span>
           </Link>
 
-          {/* Navigation */}
-          <div className="flex items-center space-x-4">
-            {!isHomePage && (
+          <Link
+            to="/knowledge"
+            className={`font-medium flex items-center space-x-1 px-3 py-2 rounded-lg transition-all ${
+              isActiveLink("/knowledge")
+                ? "bg-amber-100 text-amber-900"
+                : "text-amber-700 hover:text-amber-900 hover:bg-amber-50"
+            }`}
+          >
+            <span>🌰</span>
+            <span>我的收藏</span>
+          </Link>
+
+          <Link
+            to="/topics"
+            className={`font-medium flex items-center space-x-1 px-3 py-2 rounded-lg transition-all ${
+              isActiveLink("/topics")
+                ? "bg-amber-100 text-amber-900"
+                : "text-amber-700 hover:text-amber-900 hover:bg-amber-50"
+            }`}
+          >
+            <span>🌳</span>
+            <span>知识树</span>
+          </Link>
+
+          {/* 用户菜单 */}
+          {user ? (
+            <div className="flex items-center space-x-3 ml-4 pl-4 border-l border-amber-200">
+              <div className="flex items-center space-x-2">
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.name || user.email}
+                    className="w-8 h-8 rounded-full border border-amber-300"
+                  />
+                ) : (
+                  <div className="w-8 h-8 bg-amber-300 rounded-full flex items-center justify-center text-amber-800 text-sm font-medium">
+                    {(user.name || user.email)[0].toUpperCase()}
+                  </div>
+                )}
+                <div className="hidden sm:block">
+                  <div className="text-sm font-medium text-amber-900">
+                    {user.name || "用户"}
+                  </div>
+                  <div className="text-xs text-amber-600">{user.email}</div>
+                </div>
+              </div>
+              <Form method="post" action="/auth/logout">
+                <button
+                  type="submit"
+                  className="text-amber-600 hover:text-amber-800 text-sm font-medium flex items-center transition-colors px-2 py-1 rounded hover:bg-amber-50"
+                >
+                  <span className="mr-1">👋</span>
+                  注销
+                </button>
+              </Form>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2 ml-4 pl-4 border-l border-amber-200">
               <Link
-                to="/"
-                className="px-4 py-2 bg-gradient-to-r from-pink-400 to-purple-500 text-white rounded-xl font-medium hover:from-pink-500 hover:to-purple-600 transition-all duration-300 transform hover:scale-105 shadow-md text-sm"
+                to="/auth/login"
+                className="text-amber-700 hover:text-amber-900 text-sm font-medium transition-colors px-3 py-2 rounded-lg hover:bg-amber-50"
               >
-                🐱 新对话
+                登录
               </Link>
-            )}
-          </div>
+              <Link
+                to="/auth/register"
+                className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                注册
+              </Link>
+            </div>
+          )}
         </div>
       </div>
-    </header>
+    </nav>
   );
 }

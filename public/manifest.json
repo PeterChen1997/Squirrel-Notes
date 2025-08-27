@@ -1,0 +1,56 @@
+{
+  "name": "松鼠随记 - 聪明的知识收集助手",
+  "short_name": "松鼠随记",
+  "description": "像松鼠储存坚果一样，帮你整理每一个学习收获",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FEF7ED",
+  "theme_color": "#F59E0B",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["education", "productivity", "utilities"],
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/logo-light.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-light.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "快速记录",
+      "short_name": "记录",
+      "description": "快速记录新的学习内容",
+      "url": "/",
+      "icons": [
+        {
+          "src": "/logo-light.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "我的收藏",
+      "short_name": "收藏",
+      "description": "查看所有收藏的知识点",
+      "url": "/knowledge",
+      "icons": [
+        {
+          "src": "/logo-light.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}
