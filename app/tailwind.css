@@ -10,3 +10,45 @@ body {
     color-scheme: dark;
   }
 }
+
+/* 确保输入框在黑暗模式下有适当的颜色对比度 */
+@layer base {
+  input,
+  textarea,
+  select {
+    @apply text-gray-900 dark:text-gray-100;
+    @apply bg-white dark:bg-gray-800;
+    @apply border-gray-300 dark:border-gray-600;
+    @apply placeholder-gray-500 dark:placeholder-gray-400;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    @apply border-blue-500 dark:border-blue-400;
+    @apply ring-blue-500 dark:ring-blue-400;
+  }
+
+  /* 特殊的自定义样式覆盖 */
+  .dark input[class*="border-amber"],
+  .dark textarea[class*="border-amber"],
+  .dark select[class*="border-amber"] {
+    @apply bg-gray-800 border-gray-600 text-gray-100 placeholder-gray-400;
+  }
+
+  .dark input[class*="border-amber"]:focus,
+  .dark textarea[class*="border-amber"]:focus,
+  .dark select[class*="border-amber"]:focus {
+    @apply border-amber-400 ring-amber-400;
+  }
+
+  .dark input[class*="bg-amber"],
+  .dark textarea[class*="bg-amber"] {
+    @apply bg-gray-800 text-gray-100;
+  }
+
+  .dark input[class*="text-amber"],
+  .dark textarea[class*="text-amber"] {
+    @apply text-gray-100;
+  }
+}

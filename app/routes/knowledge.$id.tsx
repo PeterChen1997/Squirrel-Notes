@@ -7,12 +7,18 @@ import {
   getAllKnowledgePoints,
   getLearningTopic,
   getAllLearningTopics,
+  getAllTags,
+  createOrGetTags,
+  createLearningTopic,
+  initDatabase,
 } from "~/lib/db.server";
 import { getCurrentUser, createAnonymousCookie } from "~/lib/auth.server";
 import { json, redirect } from "@remix-run/node";
 import Header from "~/components/Header";
 
 export const loader = async ({ params, request }: LoaderFunctionArgs) => {
+  await initDatabase();
+
   const id = params.id;
   if (!id) {
     throw new Response("Not Found", { status: 404 });
@@ -21,7 +27,7 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
   const { user, anonymousId, isDemo } = await getCurrentUser(request);
   const userId = user?.id || anonymousId;
 
-  const knowledgePoint = await getKnowledgePoint(id);
+  const knowledgePoint = await getKnowledgePoint(id, userId);
   if (!knowledgePoint) {
     throw new Response("Not Found", { status: 404 });
   }
@@ -34,28 +40,64 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
   // 获取所有学习主题供用户选择
   const allTopics = await getAllLearningTopics(userId);
 
-  // 获取相关知识点（同类别的其他知识点）
+  // 获取相关知识点（有相同标签的其他知识点，最多3个）
   const relatedPoints = await getAllKnowledgePoints(userId);
   const filteredRelated = relatedPoints
-    .filter((p) => p.id !== id && p.category === knowledgePoint.category)
-    .slice(0, 5);
+    .filter((p) => {
+      if (p.id === id) return false;
+      // 检查是否有共同标签
+      if (!knowledgePoint.tags || !p.tags) return false;
+      const pointTagNames = knowledgePoint.tags.map((tag) =>
+        typeof tag === "string" ? tag : tag.name
+      );
+      const pTagNames = p.tags.map((tag) =>
+        typeof tag === "string" ? tag : tag.name
+      );
+      return pointTagNames.some((tag) => pTagNames.includes(tag));
+    })
+    .sort((a, b) => {
+      // 按相关性排序：优先考虑同主题的，然后按重要度，最后按更新时间
+      const aIsSameTopic =
+        a.learning_topic_id === knowledgePoint.learning_topic_id;
+      const bIsSameTopic =
+        b.learning_topic_id === knowledgePoint.learning_topic_id;
+
+      if (aIsSameTopic && !bIsSameTopic) return -1;
+      if (!aIsSameTopic && bIsSameTopic) return 1;
+
+      // 最后按更新时间排序（新到旧）
+      return (
+        new Date(b.updated_at || 0).getTime() -
+        new Date(a.updated_at || 0).getTime()
+      );
+    })
+    .slice(0, 3);
+
+  // 获取所有现有标签
+  const allTags = await getAllTags(userId);
 
   const headers: HeadersInit = {};
   if (anonymousId && !user) {
     headers["Set-Cookie"] = createAnonymousCookie(anonymousId);
   }
 
-  return json({
-    knowledgePoint,
-    learningTopic,
-    relatedPoints: filteredRelated,
-    allTopics,
-    user,
-    isDemo,
-  }, { headers });
+  return json(
+    {
+      knowledgePoint,
+      learningTopic,
+      relatedPoints: filteredRelated,
+      allTopics,
+      allTags,
+      user,
+      isDemo,
+    },
+    { headers }
+  );
 };
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
+  await initDatabase();
+
   const id = params.id;
   if (!id) {
     throw new Response("Not Found", { status: 404 });
@@ -65,25 +107,50 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   const intent = formData.get("intent");
 
   if (intent === "update") {
+    const { user, anonymousId } = await getCurrentUser(request);
+    const userId = user?.id || anonymousId;
+
     const title = formData.get("title") as string;
     const content = formData.get("content") as string;
-    const category = formData.get("category") as string;
     const tags = formData.get("tags") as string;
-    const importance = parseInt(formData.get("importance") as string);
-    const learningTopicId = formData.get("learningTopicId") as string;
+
+    let learningTopicId = formData.get("learningTopicId") as string;
+
+    // 处理创建新主题的情况
+    if (learningTopicId === "__custom__") {
+      const customName = formData.get("customTopicName") as string;
+      if (customName && customName.trim()) {
+        // 创建自定义主题
+        const newTopic = await createLearningTopic({
+          name: customName.trim(),
+          description: `用户自定义主题: ${customName.trim()}`,
+          user_id: userId,
+        });
+        learningTopicId = newTopic.id!;
+      } else {
+        learningTopicId = "";
+      }
+    }
+
+    // 处理标签
+    const tagNames = tags
+      ? tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter((t) => t)
+      : [];
+    const createdTags =
+      tagNames.length > 0 ? await createOrGetTags(tagNames, userId) : [];
+    const tagIds = createdTags
+      .map((tag) => tag.id)
+      .filter((id): id is string => Boolean(id));
 
     await updateKnowledgePoint(id, {
       title,
       content,
-      category,
-      tags: tags
-        ? tags
-            .split(",")
-            .map((t) => t.trim())
-            .filter((t) => t)
-        : [],
-      importance,
-      learning_topic_id: learningTopicId || null,
+      tag_ids: tagIds as string[],
+
+      learning_topic_id: learningTopicId || undefined,
     });
 
     return redirect(`/knowledge/${id}`);
@@ -93,17 +160,31 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 };
 
 export default function KnowledgeDetailPage() {
-  const { knowledgePoint, learningTopic, relatedPoints, allTopics, user, isDemo } =
-    useLoaderData<typeof loader>();
+  const {
+    knowledgePoint,
+    learningTopic,
+    relatedPoints,
+    allTopics,
+    allTags,
+    user,
+    isDemo,
+  } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(knowledgePoint.title || "");
   const [editedContent, setEditedContent] = useState(knowledgePoint.content);
-  const [editedCategory, setEditedCategory] = useState(knowledgePoint.category);
-  const [editedTags, setEditedTags] = useState(knowledgePoint.tags.join(", "));
-  const [editedImportance, setEditedImportance] = useState(
-    knowledgePoint.importance
+  const [editedTags, setEditedTags] = useState(
+    knowledgePoint.tags
+      ? knowledgePoint.tags
+          .map((tag) => (typeof tag === "string" ? tag : tag.name))
+          .join(", ")
+      : ""
   );
+
+  const [editedTopicId, setEditedTopicId] = useState(
+    knowledgePoint.learning_topic_id || ""
+  );
+  const [customTopicName, setCustomTopicName] = useState("");
 
   const isSubmitting = navigation.state === "submitting";
 
@@ -117,52 +198,9 @@ export default function KnowledgeDetailPage() {
     });
   };
 
-  const getImportanceStars = (importance: number) => {
-    return "⭐".repeat(importance);
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
-      {/* 顶部导航 */}
-      <nav className="px-6 py-4 border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="flex justify-between items-center max-w-6xl mx-auto">
-          <Link
-            to="/knowledge"
-            className="flex items-center space-x-3 text-gray-600 hover:text-gray-900"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            <span>返回知识库</span>
-          </Link>
-          <div className="flex items-center space-x-4">
-            {!isEditing && (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="px-4 py-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-all"
-              >
-                编辑
-              </button>
-            )}
-            <Link
-              to="/"
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all"
-            >
-              + 新增笔记
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50">
+      <Header user={user} isDemo={isDemo} />
 
       <div className="px-6 py-8">
         <div className="max-w-6xl mx-auto">
@@ -174,6 +212,11 @@ export default function KnowledgeDetailPage() {
                   /* 编辑模式 */
                   <Form method="post" className="p-6">
                     <input type="hidden" name="intent" value="update" />
+                    <input
+                      type="hidden"
+                      name="learningTopicId"
+                      value={editedTopicId}
+                    />
 
                     <div className="space-y-6">
                       {/* 标题编辑 */}
@@ -207,96 +250,106 @@ export default function KnowledgeDetailPage() {
                         />
                       </div>
 
-                      {/* 分类和标签 */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            分类
-                          </label>
-                          <input
-                            type="text"
-                            name="category"
-                            value={editedCategory}
-                            onChange={(e) => setEditedCategory(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            required
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            标签 (用逗号分隔)
-                          </label>
-                          <input
-                            type="text"
-                            name="tags"
-                            value={editedTags}
-                            onChange={(e) => setEditedTags(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="标签1, 标签2"
-                          />
-                        </div>
-                      </div>
-
-                      {/* 重要程度 */}
+                      {/* 标签编辑 */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-3">
-                          重要程度
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          标签 (用逗号分隔)
                         </label>
-                        <div className="flex items-center space-x-4">
-                          {[1, 2, 3, 4, 5].map((level) => (
-                            <label
-                              key={level}
-                              className="flex items-center cursor-pointer"
-                            >
-                              <input
-                                type="radio"
-                                name="importance"
-                                value={level}
-                                checked={editedImportance === level}
-                                onChange={(e) =>
-                                  setEditedImportance(parseInt(e.target.value))
-                                }
-                                className="sr-only"
-                              />
-                              <span
-                                className={`text-2xl ${
-                                  editedImportance >= level
-                                    ? "text-yellow-400"
-                                    : "text-gray-300"
-                                }`}
-                              >
-                                ⭐
-                              </span>
-                            </label>
-                          ))}
-                        </div>
+                        <input
+                          type="text"
+                          name="tags"
+                          value={editedTags}
+                          onChange={(e) => setEditedTags(e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="标签1, 标签2"
+                        />
                       </div>
+                    </div>
 
-                      {/* 操作按钮 */}
-                      <div className="flex space-x-4 pt-4 border-t">
-                        <button
-                          type="submit"
-                          disabled={isSubmitting}
-                          className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all"
-                        >
-                          {isSubmitting ? "保存中..." : "保存更改"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsEditing(false);
-                            setEditedTitle(knowledgePoint.title || "");
-                            setEditedContent(knowledgePoint.content);
-                            setEditedCategory(knowledgePoint.category);
-                            setEditedTags(knowledgePoint.tags.join(", "));
-                            setEditedImportance(knowledgePoint.importance);
+                    {/* 学习主题选择 */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
+                      <label className="block text-sm font-medium text-blue-900 mb-3 flex items-center">
+                        <span className="mr-2">🎯</span>
+                        选择学习主题
+                      </label>
+
+                      <div className="space-y-3">
+                        {/* 主题选择下拉框 */}
+                        <select
+                          name="learningTopicId"
+                          value={editedTopicId}
+                          onChange={(e) => {
+                            setEditedTopicId(e.target.value);
+                            if (e.target.value !== "__custom__") {
+                              setCustomTopicName("");
+                            }
                           }}
-                          className="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all"
+                          className="w-full px-4 py-3 border border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                         >
-                          取消
-                        </button>
+                          <option value="">不关联学习主题</option>
+                          {allTopics.map((topic) => (
+                            <option key={topic.id} value={topic.id}>
+                              📚 {topic.name}
+                            </option>
+                          ))}
+                          <option value="__custom__">✨ 自定义新主题</option>
+                        </select>
+
+                        {/* 自定义主题输入框 */}
+                        {editedTopicId === "__custom__" && (
+                          <div className="bg-white rounded-lg border border-blue-300 p-3">
+                            <label className="block text-sm font-medium text-blue-900 mb-2">
+                              自定义主题名称:
+                            </label>
+                            <input
+                              type="text"
+                              name="customTopicName"
+                              value={customTopicName}
+                              onChange={(e) =>
+                                setCustomTopicName(e.target.value)
+                              }
+                              className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="输入新的学习主题名称..."
+                              required
+                            />
+                          </div>
+                        )}
                       </div>
+                    </div>
+
+                    {/* 操作按钮 */}
+                    <div className="flex space-x-4 pt-4 border-t">
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all"
+                      >
+                        {isSubmitting ? "保存中..." : "保存更改"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsEditing(false);
+                          setEditedTitle(knowledgePoint.title || "");
+                          setEditedContent(knowledgePoint.content);
+                          setEditedTags(
+                            knowledgePoint.tags
+                              ? knowledgePoint.tags
+                                  .map((tag) =>
+                                    typeof tag === "string" ? tag : tag.name
+                                  )
+                                  .join(", ")
+                              : ""
+                          );
+
+                          setEditedTopicId(
+                            knowledgePoint.learning_topic_id || ""
+                          );
+                        }}
+                        className="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all"
+                      >
+                        取消
+                      </button>
                     </div>
                   </Form>
                 ) : (
@@ -304,9 +357,29 @@ export default function KnowledgeDetailPage() {
                   <div className="p-6">
                     {/* 头部信息 */}
                     <div className="mb-6 pb-6 border-b border-gray-100">
-                      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-                        {knowledgePoint.title || "无标题"}
-                      </h1>
+                      <div className="flex justify-between items-start mb-4">
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                          {knowledgePoint.title || "无标题"}
+                        </h1>
+                        <button
+                          onClick={() => setIsEditing(true)}
+                          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
+                          </svg>
+                        </button>
+                      </div>
 
                       <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                         <div className="flex items-center">
@@ -328,29 +401,39 @@ export default function KnowledgeDetailPage() {
                             formatDate(knowledgePoint.created_at.toString())}
                         </div>
 
-                        <div className="flex items-center">
-                          <svg
-                            className="w-4 h-4 mr-2"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                            />
-                          </svg>
-                          {knowledgePoint.category}
-                        </div>
-
-                        <div className="flex items-center">
-                          <span className="mr-2">重要程度:</span>
-                          {getImportanceStars(knowledgePoint.importance)}
-                        </div>
+                        {/* 标签显示 */}
+                        {knowledgePoint.tags &&
+                          knowledgePoint.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {knowledgePoint.tags
+                                .slice(0, 3)
+                                .map((tag, index) => (
+                                  <span
+                                    key={index}
+                                    className="px-2 py-1 bg-blue-100 text-blue-700 text-sm rounded-full"
+                                  >
+                                    {typeof tag === "string" ? tag : tag.name}
+                                  </span>
+                                ))}
+                            </div>
+                          )}
                       </div>
                     </div>
+
+                    {/* AI 摘要 */}
+                    {knowledgePoint.summary && (
+                      <div className="mb-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                          <span className="mr-2">🤖</span>
+                          AI 智能摘要
+                        </h3>
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                          <p className="text-blue-800 leading-relaxed">
+                            {knowledgePoint.summary}
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                     {/* 内容 */}
                     <div className="mb-6">
@@ -365,7 +448,7 @@ export default function KnowledgeDetailPage() {
                     </div>
 
                     {/* 标签 */}
-                    {knowledgePoint.tags.length > 0 && (
+                    {knowledgePoint.tags && knowledgePoint.tags.length > 0 && (
                       <div className="mb-6">
                         <h3 className="text-lg font-semibold text-gray-900 mb-3">
                           标签
@@ -376,7 +459,7 @@ export default function KnowledgeDetailPage() {
                               key={index}
                               className="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full"
                             >
-                              {tag}
+                              {typeof tag === "string" ? tag : tag.name}
                             </span>
                           ))}
                         </div>
@@ -449,12 +532,17 @@ export default function KnowledgeDetailPage() {
                           {point.content}
                         </p>
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-xs text-blue-600">
-                            {point.category}
-                          </span>
-                          <span className="text-xs">
-                            {getImportanceStars(point.importance)}
-                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {point.tags &&
+                              point.tags.slice(0, 2).map((tag, idx) => (
+                                <span
+                                  key={idx}
+                                  className="text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded-full"
+                                >
+                                  {typeof tag === "string" ? tag : tag.name}
+                                </span>
+                              ))}
+                          </div>
                         </div>
                       </Link>
                     ))}

@@ -41,7 +41,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     category: "技术动作",
     tags: ["正手", "击球", "基础技术"],
     keywords: ["击球点", "转腰", "随挥", "脚步"],
-    importance: 4,
+
     confidence: 0.9,
     learning_topic_id: tennisTopic.id,
     related_ids: [],
@@ -64,7 +64,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     category: "框架使用",
     tags: ["React", "Hooks", "前端"],
     keywords: ["useState", "useEffect", "性能优化"],
-    importance: 5,
+
     confidence: 0.95,
     learning_topic_id: programmingTopic.id,
     related_ids: [],
@@ -86,7 +86,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     category: "口语",
     tags: ["发音", "练习", "音标"],
     keywords: ["th音", "r音", "重音"],
-    importance: 3,
+
     confidence: 0.8,
     learning_topic_id: englishTopic.id,
     related_ids: [],

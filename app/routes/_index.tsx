@@ -44,6 +44,10 @@ export default function Index() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
+  // 检查是否正在提交或加载
+  const isSubmitting =
+    navigation.state === "submitting" || navigation.state === "loading";
+
   const examples = [
     "今天网球课学习了正手击球要点：击球点要在身体前方，挥拍时要转动腰部",
     "编程学习：React Hooks 的 useEffect 依赖数组为空时只执行一次",
@@ -124,7 +128,7 @@ export default function Index() {
             <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-200 overflow-hidden animate-slide-up relative z-10">
               {/* 输入模式切换 */}
               <div className="border-b border-amber-100 p-4 bg-gradient-to-r from-amber-50 to-orange-50">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-amber-900 flex items-center">
                     <span className="mr-2">📝</span>
                     小松鼠收集时间
@@ -141,7 +145,7 @@ export default function Index() {
                     >
                       {/* 录音动效圆圈 */}
                       <div
-                        className={`relative mr-3 ${
+                        className={`relative ${
                           isRecording ? "animate-pulse" : ""
                         }`}
                       >
@@ -167,38 +171,15 @@ export default function Index() {
                         )}
                       </div>
 
-                      {/* 按钮文本 */}
-                      <span className="flex items-center">
-                        {isRecording ? (
-                          <>
-                            <span className="mr-1">🛑</span>
-                            <span>停止录音</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="mr-1">🎙️</span>
-                            <span>语音记录</span>
-                          </>
-                        )}
-                      </span>
-
                       {/* 悬浮效果光晕 */}
                       <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-white/10 to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     </button>
-
-                    {/* 录音状态提示 */}
-                    {isRecording && (
-                      <div className="flex items-center text-red-600 text-sm font-medium animate-pulse">
-                        <div className="w-2 h-2 bg-red-500 rounded-full mr-2 animate-pulse"></div>
-                        录音中...
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
 
               {/* 文本输入区域 */}
-              <div className="p-6">
+              <div className="pb-4 px-4">
                 <div className="space-y-4">
                   {/* 输入框 */}
                   <div className="relative">
@@ -207,15 +188,20 @@ export default function Index() {
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
                       placeholder="🌰 告诉小松鼠你今天学到了什么新知识吧～ 比如：今天网球课学到的发球技巧..."
-                      className="w-full p-4 text-base border-2 border-amber-200 rounded-xl focus:border-amber-500 focus:outline-none resize-none h-40 text-amber-900 placeholder-amber-400 transition-all bg-amber-25"
+                      className={`w-full p-4 text-base border-2 border-amber-200 rounded-xl focus:border-amber-500 focus:outline-none resize-none h-40 text-amber-900 placeholder-amber-400 transition-all bg-amber-25 ${
+                        isSubmitting ? "opacity-60 pointer-events-none" : ""
+                      }`}
                       rows={6}
                       required
+                      disabled={isSubmitting}
                     />
 
                     {/* 字符计数器 - 放在右下角 */}
-                    <div className="absolute bottom-2 right-3 text-xs text-amber-400 flex items-center bg-white/80 backdrop-blur-sm px-2 py-1 rounded-full">
+                    <div className="absolute bottom-2 right-3 text-sm font-medium text-amber-700 flex items-center bg-white/95 backdrop-blur-sm px-3 py-2 rounded-full shadow-sm border border-amber-200 mb-3">
                       <span className="mr-1">🐿️</span>
-                      {content.length}/1000
+                      <span className="text-amber-800">{content.length}</span>
+                      <span className="text-amber-500 mx-1">/</span>
+                      <span className="text-amber-600">1000</span>
                     </div>
                   </div>
 
@@ -224,26 +210,37 @@ export default function Index() {
                     {/* 提示文本 */}
                     <div className="text-sm text-amber-600 flex items-center">
                       <span className="mr-1">💡</span>
-                      小松鼠会智能分析并分类你的知识
+                      分析和分类交给我把
                     </div>
 
                     {/* 保存按钮 */}
                     <button
                       type="submit"
-                      disabled={
-                        !content.trim() || navigation.state === "submitting"
-                      }
-                      className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-medium rounded-xl hover:from-amber-600 hover:to-orange-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg transform hover:scale-[1.02] disabled:scale-100"
+                      disabled={!content.trim() || isSubmitting}
+                      className={`px-6 py-3 font-medium rounded-xl transition-all shadow-md hover:shadow-lg transform hover:scale-[1.02] disabled:scale-100 disabled:cursor-not-allowed ${
+                        isSubmitting
+                          ? "bg-gradient-to-r from-gray-400 to-gray-500 text-white cursor-not-allowed"
+                          : "bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600"
+                      } ${
+                        !content.trim()
+                          ? "disabled:from-gray-300 disabled:to-gray-400"
+                          : ""
+                      }`}
                     >
-                      {navigation.state === "submitting" ? (
+                      {isSubmitting ? (
                         <div className="flex items-center">
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          AI分析中...
+                          <span>
+                            loading...
+                            {/* {navigation.state === "submitting"
+                              ? "loading..."
+                              : "页面跳转中..."} */}
+                          </span>
                         </div>
                       ) : (
                         <span className="flex items-center">
                           <span className="mr-2">🚀</span>
-                          智能收集
+                          走你
                         </span>
                       )}
                     </button>
@@ -266,8 +263,11 @@ export default function Index() {
                   <button
                     key={index}
                     type="button"
-                    onClick={() => setContent(example)}
-                    className="text-left p-4 bg-amber-50 hover:bg-amber-100 rounded-xl transition-all text-amber-800 hover:text-amber-900 border border-amber-100 hover:border-amber-300 shadow-sm hover:shadow-md"
+                    onClick={() => !isSubmitting && setContent(example)}
+                    className={`text-left p-4 bg-amber-50 hover:bg-amber-100 rounded-xl transition-all text-amber-800 hover:text-amber-900 border border-amber-100 hover:border-amber-300 shadow-sm hover:shadow-md ${
+                      isSubmitting ? "opacity-60 cursor-not-allowed" : ""
+                    }`}
+                    disabled={isSubmitting}
                   >
                     <span className="text-sm flex items-start">
                       <span className="mr-2 text-amber-500">🐿️</span>

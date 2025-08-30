@@ -24,31 +24,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     getAllKnowledgePoints(userId),
   ]);
 
-  // 为每个主题计算知识点数量和分类统计
+  // 为每个主题计算知识点数量和标签统计
   const topicsWithStats = topics.map((topic) => {
     const topicKnowledgePoints = knowledgePoints.filter(
       (kp) => kp.learning_topic_id === topic.id
     );
-    const categories = [
-      ...new Set(topicKnowledgePoints.map((kp) => kp.category)),
+    // 获取所有标签
+    const allTags = topicKnowledgePoints.flatMap((kp) => kp.tags || []);
+    const uniqueTags = [
+      ...new Set(
+        allTags.map((tag) => (typeof tag === "string" ? tag : tag.name))
+      ),
     ];
-    const totalImportance = topicKnowledgePoints.reduce(
-      (sum, kp) => sum + kp.importance,
-      0
-    );
-    const avgImportance =
-      topicKnowledgePoints.length > 0
-        ? totalImportance / topicKnowledgePoints.length
-        : 0;
 
     return {
       ...topic,
       knowledgePointsCount: topicKnowledgePoints.length,
-      categories,
-      avgImportance: Math.round(avgImportance * 10) / 10,
+      uniqueTags,
+
       recentUpdated: topicKnowledgePoints.sort(
         (a, b) =>
-          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+          new Date(b.updated_at || 0).getTime() -
+          new Date(a.updated_at || 0).getTime()
       )[0]?.updated_at,
     };
   });
@@ -232,26 +229,24 @@ export default function TopicsPage() {
 
                   {/* 主题内容 */}
                   <div className="p-6">
-                    {/* 分类展示 */}
-                    {topic.categories.length > 0 && (
+                    {/* 标签展示 */}
+                    {topic.uniqueTags.length > 0 && (
                       <div className="mb-4">
                         <div className="text-sm font-medium text-amber-900 mb-2">
-                          包含分类：
+                          相关标签：
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {topic.categories
-                            .slice(0, 3)
-                            .map((category, index) => (
-                              <span
-                                key={index}
-                                className="px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full"
-                              >
-                                {category}
-                              </span>
-                            ))}
-                          {topic.categories.length > 3 && (
+                          {topic.uniqueTags.slice(0, 3).map((tag, index) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                          {topic.uniqueTags.length > 3 && (
                             <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                              +{topic.categories.length - 3}
+                              +{topic.uniqueTags.length - 3}
                             </span>
                           )}
                         </div>
@@ -261,17 +256,7 @@ export default function TopicsPage() {
                     {/* 平均重要度 */}
                     {topic.knowledgePointsCount > 0 && (
                       <div className="mb-4">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-amber-900 font-medium">
-                            平均重要度：
-                          </span>
-                          <div className="flex items-center">
-                            {"⭐".repeat(Math.round(topic.avgImportance))}
-                            <span className="ml-1 text-amber-700">
-                              ({topic.avgImportance})
-                            </span>
-                          </div>
-                        </div>
+                        <div className="flex items-center justify-between text-sm"></div>
                       </div>
                     )}
 
@@ -288,10 +273,10 @@ export default function TopicsPage() {
                     {/* 操作按钮 */}
                     <div className="flex space-x-2 mt-4">
                       <Link
-                        to={`/knowledge?topicId=${topic.id}`}
+                        to={`/knowledge?topic=${topic.id}`}
                         className="flex-1 text-center px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600 transition-all"
                       >
-                        查看知识点
+                        查看概览
                       </Link>
                       <Link
                         to="/"

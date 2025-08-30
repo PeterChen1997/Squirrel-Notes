@@ -1,44 +1,60 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
+import { redirect, json } from "@remix-run/node";
 import { useLoaderData, useNavigation, Link } from "@remix-run/react";
 import { useState, useEffect } from "react";
-import { 
+import {
   getLearningTopic,
   getAllLearningTopics,
+  getAllTags,
+  initDatabase,
 } from "~/lib/db.server";
 import { analyzeLearningNote } from "~/lib/openai.server";
+import { getCurrentUser, createAnonymousCookie } from "~/lib/auth.server";
+import Header from "~/components/Header";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  await initDatabase();
+
   const url = new URL(request.url);
   const content = url.searchParams.get("content");
   const topicId = url.searchParams.get("topicId");
-  
+
   if (!content) {
     return redirect("/");
   }
 
-  // 获取现有分类信息
-  const topics = await getAllLearningTopics();
+  const { user, anonymousId, isDemo } = await getCurrentUser(request);
+  const userId = user?.id || anonymousId;
+
+  // 获取现有主题和标签信息
+  const topics = await getAllLearningTopics(userId);
   const selectedTopic = topicId ? await getLearningTopic(topicId) : null;
-  const existingCategories = topics.flatMap((t) => t.categories);
+  const existingTags = await getAllTags(userId);
 
   // AI 分析内容
-  const analysis = await analyzeLearningNote(
-    content, 
-    selectedTopic?.name,
-    existingCategories
-  );
+  const analysis = await analyzeLearningNote(content, topics, existingTags);
 
-  return {
-    content,
-    topicId,
-    selectedTopic,
-    analysis
-  };
+  const headers: HeadersInit = {};
+  if (anonymousId && !user) {
+    headers["Set-Cookie"] = createAnonymousCookie(anonymousId);
+  }
+
+  return json(
+    {
+      content,
+      topicId,
+      selectedTopic,
+      analysis,
+      user,
+      isDemo,
+    },
+    { headers }
+  );
 };
 
 export default function ProgressPage() {
-  const { content, analysis, selectedTopic } = useLoaderData<typeof loader>();
+  const { content, analysis, selectedTopic, user, isDemo } =
+    useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -47,13 +63,13 @@ export default function ProgressPage() {
     { text: "🐿️ 小松鼠正在仔细阅读...", emoji: "📖" },
     { text: "🧠 分析知识要点...", emoji: "💡" },
     { text: "🏷️ 智能分类整理...", emoji: "📝" },
-    { text: "🌰 收集完成！", emoji: "✅" }
+    { text: "🌰 收集完成！", emoji: "✅" },
   ];
 
   // 模拟进度
   useEffect(() => {
     const timer = setInterval(() => {
-      setProgress(prev => {
+      setProgress((prev) => {
         if (prev < 100) {
           return Math.min(prev + Math.random() * 15 + 5, 100);
         }
@@ -67,7 +83,7 @@ export default function ProgressPage() {
   // 步骤切换
   useEffect(() => {
     const stepTimer = setInterval(() => {
-      setCurrentStep(prev => {
+      setCurrentStep((prev) => {
         if (prev < steps.length - 1) {
           return prev + 1;
         }
@@ -92,16 +108,22 @@ export default function ProgressPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50 relative overflow-hidden">
+      <Header user={user} isDemo={isDemo} />
       {/* 背景装饰 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 right-20 text-6xl opacity-20 animate-float">🐿️</div>
-        <div className="absolute bottom-32 left-20 text-4xl opacity-20 animate-float-delayed">🌰</div>
-        <div className="absolute top-1/2 left-1/3 text-3xl opacity-15 animate-pulse">🍂</div>
+        <div className="absolute top-20 right-20 text-6xl opacity-20 animate-float">
+          🐿️
+        </div>
+        <div className="absolute bottom-32 left-20 text-4xl opacity-20 animate-float-delayed">
+          🌰
+        </div>
+        <div className="absolute top-1/2 left-1/3 text-3xl opacity-15 animate-pulse">
+          🍂
+        </div>
       </div>
 
       <div className="flex items-center justify-center min-h-screen p-6 relative z-10">
         <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-8 max-w-md w-full text-center shadow-xl border border-amber-200">
-          
           {/* 松鼠动画 */}
           <div className="mb-8">
             <div className="text-8xl mb-4 animate-bounce-slow">🐿️</div>
@@ -143,15 +165,9 @@ export default function ProgressPage() {
                   <span className="mr-2">🏷️</span>
                   分析结果
                 </h3>
-                
+
                 {/* 智能标签 */}
                 <div className="flex flex-wrap gap-2 justify-center mb-3">
-                  <span className="px-3 py-1 bg-amber-200 text-amber-800 text-sm rounded-full">
-                    📚 {analysis.category}
-                  </span>
-                  <span className="px-3 py-1 bg-orange-200 text-orange-800 text-sm rounded-full">
-                    ⭐ {analysis.importance}/5
-                  </span>
                   <span className="px-3 py-1 bg-yellow-200 text-yellow-800 text-sm rounded-full">
                     🎯 {Math.round(analysis.confidence * 100)}%
                   </span>
