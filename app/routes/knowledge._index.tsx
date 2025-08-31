@@ -333,9 +333,7 @@ export default function KnowledgeIndex() {
             <div className="space-y-3 sm:space-y-0 sm:flex sm:flex-wrap sm:gap-4">
               {/* 主题筛选 */}
               <div className="flex-1 sm:flex-none">
-                <Label className="hidden sm:block text-gray-700 mb-2">
-                  学习主题
-                </Label>
+                <Label className="hidden sm:block mb-2">学习主题</Label>
                 <div className="flex gap-2">
                   <select
                     value={selectedTopic || ""}
