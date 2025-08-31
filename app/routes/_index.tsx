@@ -4,6 +4,14 @@ import type {
   ActionFunctionArgs,
 } from "@remix-run/node";
 import { useState, useRef } from "react";
+
+// 添加Web Speech API类型定义
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
 import { Form, useNavigation, useLoaderData, Link } from "@remix-run/react";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -15,6 +23,8 @@ import {
 import { getCurrentUser, createAnonymousCookie } from "~/lib/auth.server";
 import { analyzeLearningNote } from "~/lib/openai.server";
 import Header from "~/components/Header";
+import Textarea from "~/components/Textarea";
+import PageTitle from "~/components/PageTitle";
 
 export const meta: MetaFunction = () => {
   return [
@@ -56,36 +66,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   try {
-    // 获取现有主题和标签信息用于AI分析
-    const topics = await getAllLearningTopics(userId);
-    const existingTags = await getAllTags(userId);
-
-    // AI 分析内容
-    const analysis = await analyzeLearningNote(
-      content,
-      topics
-        .filter((t) => t.id)
-        .map((t) => ({ id: t.id!, name: t.name, description: t.description })),
-      existingTags
-    );
-
-    // 立即保存到数据库
+    // 先保存到数据库（不进行AI分析）
     const savedKnowledge = await createKnowledgePoint({
-      title: analysis.title || content.substring(0, 50) + "...", // 使用AI生成的标题或内容前50字符
+      title: content.substring(0, 50) + "...", // 临时标题
       user_id: userId,
       content: content.trim(),
-      learning_topic_id: undefined, // 先不关联主题，在analyze页面编辑时再关联
-      summary: analysis.summary, // 保存AI摘要
-      tag_ids: [], // 先不添加标签，在analyze页面编辑时再添加
-      keywords: [], // 先不添加关键词
-      confidence: analysis.confidence || 0.8,
+      learning_topic_id: undefined,
+      summary: "", // 暂时为空
+      tag_ids: [],
+      keywords: [],
+      confidence: 0,
       related_ids: [],
       attachments: [],
-      processing_status: "completed",
+      processing_status: "processing", // 标记为处理中
     });
 
-    // 跳转到analyze页面进行编辑
-    return redirect(`/analyze?id=${savedKnowledge.id}`);
+    // 跳转到progress页面显示分析进度
+    const params = new URLSearchParams();
+    params.set("content", content);
+    params.set("knowledgeId", savedKnowledge.id!);
+
+    return redirect(`/progress?${params.toString()}`);
   } catch (error) {
     console.error("保存笔记失败:", error);
     return json({ error: "保存失败，请重试" }, { status: 500 });
@@ -97,9 +98,11 @@ export default function Index() {
 
   const [content, setContent] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const navigation = useNavigation();
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const recognitionRef = useRef<any>(null);
 
   // 检查是否正在提交或加载
   const isSubmitting =
@@ -112,39 +115,61 @@ export default function Index() {
     "数学：二次函数的顶点公式是 (-b/2a, 4ac-b²/4a)",
   ];
 
-  // 开始录音
-  const startRecording = async () => {
+  // 开始语音识别
+  const startSpeechRecognition = () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
-      chunksRef.current = [];
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("您的浏览器不支持语音识别功能");
+        return;
+      }
 
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        chunksRef.current.push(event.data);
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = "zh-CN";
+
+      recognitionRef.current.onresult = (event: any) => {
+        let finalTranscript = "";
+        let interimTranscript = "";
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+
+        if (finalTranscript) {
+          setContent((prev) => prev + finalTranscript);
+        }
       };
 
-      mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
-        // 这里可以上传音频并转写
-        console.log("录音完成", audioBlob);
+      recognitionRef.current.onerror = (event: any) => {
+        console.error("语音识别错误:", event.error);
+        setIsListening(false);
       };
 
-      mediaRecorderRef.current.start();
-      setIsRecording(true);
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current.start();
+      setIsListening(true);
     } catch (error) {
-      console.error("录音启动失败:", error);
-      alert("无法启动录音，请检查麦克风权限");
+      console.error("语音识别启动失败:", error);
+      alert("无法启动语音识别，请检查麦克风权限");
     }
   };
 
-  // 停止录音
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream
-        .getTracks()
-        .forEach((track) => track.stop());
-      setIsRecording(false);
+  // 停止语音识别
+  const stopSpeechRecognition = () => {
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
     }
   };
 
@@ -169,16 +194,13 @@ export default function Index() {
       {/* 主要内容区域 */}
       <div className="px-6 py-12">
         <div className="max-w-2xl mx-auto">
-          {/* 标题区域 */}
-          <div className="text-center mb-12 animate-fade-in relative z-10">
-            <div className="text-6xl mb-4">🐿️</div>
-            <h2 className="text-3xl md:text-4xl font-bold text-amber-900 mb-4">
-              小松鼠要收集知识啦！
-            </h2>
-            <p className="text-lg text-amber-700">
-              🌰 像松鼠储存坚果一样，让我帮你整理每一个学习收获
-            </p>
-          </div>
+          {/* 页面标题 */}
+          <PageTitle
+            title="松鼠随记"
+            subtitle="知识不用理，松鼠来帮忙"
+            icon="🐿️"
+            className="mb-12"
+          />
 
           <Form method="post" className="space-y-6">
             {/* 输入区域 */}
@@ -193,9 +215,13 @@ export default function Index() {
                   <div className="flex items-center space-x-2">
                     <button
                       type="button"
-                      onClick={isRecording ? stopRecording : startRecording}
+                      onClick={
+                        isListening
+                          ? stopSpeechRecognition
+                          : startSpeechRecognition
+                      }
                       className={`group relative flex items-center justify-center px-6 py-3 rounded-2xl font-medium transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 ${
-                        isRecording
+                        isListening
                           ? "bg-gradient-to-r from-red-500 to-pink-500 text-white"
                           : "bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 text-white hover:from-amber-500 hover:via-orange-500 hover:to-amber-600"
                       }`}
@@ -208,19 +234,19 @@ export default function Index() {
                       >
                         <div
                           className={`w-5 h-5 rounded-full border-2 border-white flex items-center justify-center ${
-                            isRecording ? "bg-white/20" : "bg-white/30"
+                            isListening ? "bg-white/20" : "bg-white/30"
                           }`}
                         >
                           <div
                             className={`w-2 h-2 rounded-full ${
-                              isRecording
+                              isListening
                                 ? "bg-white animate-pulse"
                                 : "bg-white"
                             }`}
                           ></div>
                         </div>
-                        {/* 录音时的声波效果 */}
-                        {isRecording && (
+                        {/* 语音识别时的声波效果 */}
+                        {isListening && (
                           <>
                             <div className="absolute inset-0 rounded-full border-2 border-white/50 animate-ping"></div>
                             <div className="absolute inset-0 rounded-full border border-white/30 animate-ping animation-delay-75"></div>
@@ -240,17 +266,18 @@ export default function Index() {
                 <div className="space-y-4">
                   {/* 输入框 */}
                   <div className="relative">
-                    <textarea
+                    <Textarea
                       name="content"
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
                       placeholder="🌰 告诉小松鼠你今天学到了什么新知识吧～ 比如：今天网球课学到的发球技巧..."
-                      className={`w-full p-4 text-base border-2 border-amber-200 rounded-xl focus:border-amber-500 focus:outline-none resize-none h-40 text-amber-900 placeholder-amber-400 transition-all bg-amber-25 ${
+                      className={`h-40 ${
                         isSubmitting ? "opacity-60 pointer-events-none" : ""
                       }`}
                       rows={6}
                       required
                       disabled={isSubmitting}
+                      variant="amber"
                     />
 
                     {/* 字符计数器 - 放在右下角 */}
@@ -288,7 +315,7 @@ export default function Index() {
                         <div className="flex items-center">
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                           <span>
-                            loading...
+                            思考中...
                             {/* {navigation.state === "submitting"
                               ? "loading..."
                               : "页面跳转中..."} */}

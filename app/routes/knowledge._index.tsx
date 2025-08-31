@@ -14,6 +14,16 @@ import {
 } from "~/lib/db.server";
 import { getCurrentUser, createAnonymousCookie } from "~/lib/auth.server";
 import Header from "~/components/Header";
+import PageTitle from "~/components/PageTitle";
+import Label from "~/components/Label";
+import { mockTopics, mockKnowledgePoints, mockTags } from "~/data/mockData";
+import {
+  isNoContentAnonymousUser,
+  shouldShowDemoNotice,
+  shouldDisableEditing,
+  type UserState,
+  type ContentState,
+} from "~/lib/user-utils";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const {
@@ -29,10 +39,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const topicId = url.searchParams.get("topic");
   const tagFilter = url.searchParams.get("tag");
 
-  const topics = await getAllLearningTopics(userId);
-  const allTags = await getAllTags(userId);
-
+  // 先尝试获取真实数据
+  let topics = await getAllLearningTopics(userId);
+  let allTags = await getAllTags(userId);
   let knowledgePoints;
+
   if (search) {
     knowledgePoints = await searchKnowledgePoints(search, userId);
   } else {
@@ -44,6 +55,45 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     knowledgePoints = knowledgePoints.filter(
       (kp) => kp.tags && kp.tags.some((tag) => tag.name === tagFilter)
     );
+  }
+
+  // 如果是匿名用户且没有真实数据，使用mock数据
+  const userState: UserState = {
+    user: user
+      ? {
+          id: user.id!,
+          email: user.email,
+          name: user.name,
+          avatar_url: user.avatar_url,
+        }
+      : undefined,
+    anonymousId,
+    isDemo,
+  };
+  const contentState: ContentState = { topics, knowledgePoints, tags: allTags };
+
+  if (isNoContentAnonymousUser(userState, contentState)) {
+    topics = mockTopics as any;
+    allTags = mockTags as any;
+
+    if (search) {
+      knowledgePoints = mockKnowledgePoints.filter(
+        (kp) =>
+          kp.title.toLowerCase().includes(search.toLowerCase()) ||
+          kp.content.toLowerCase().includes(search.toLowerCase())
+      );
+    } else {
+      knowledgePoints = topicId
+        ? mockKnowledgePoints.filter((kp) => kp.learning_topic_id === topicId)
+        : mockKnowledgePoints;
+    }
+
+    // 根据标签过滤（如果指定了标签）
+    if (tagFilter && tagFilter !== "all") {
+      knowledgePoints = knowledgePoints.filter(
+        (kp) => kp.tags && kp.tags.some((tag) => tag.name === tagFilter)
+      );
+    }
   }
 
   // 为每个主题获取AI概要
@@ -86,6 +136,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       selectedTag: tagFilter,
       user,
       isDemo,
+      anonymousId,
     },
     { headers: authHeaders }
   );
@@ -130,6 +181,7 @@ export default function KnowledgeIndex() {
     selectedTag,
     user,
     isDemo,
+    anonymousId,
   } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState(search || "");
@@ -140,6 +192,21 @@ export default function KnowledgeIndex() {
   const [recentlyUpdated, setRecentlyUpdated] = useState<Set<string>>(
     new Set()
   );
+
+  // 用户状态
+  const userState: UserState = {
+    user: user
+      ? {
+          id: user.id!,
+          email: user.email,
+          name: user.name,
+          avatar_url: user.avatar_url,
+        }
+      : undefined,
+    anonymousId,
+    isDemo,
+  };
+  const contentState: ContentState = { topics, knowledgePoints, tags: allTags };
 
   // 处理AI概览重新生成
   const handleRegenerateOverview = async (topicId: string) => {
@@ -191,8 +258,16 @@ export default function KnowledgeIndex() {
 
       <div className="px-3 sm:px-6 py-4 sm:py-8">
         <div className="max-w-6xl mx-auto">
-          {/* Demo提示 */}
-          {isDemo && (
+          {/* 页面标题 */}
+          <PageTitle
+            title="知识库"
+            subtitle="📚 管理你的所有学习笔记和主题"
+            icon="📖"
+            className="mb-6"
+          />
+
+          {/* Demo提示 - 只在没有真实数据时显示 */}
+          {shouldShowDemoNotice(userState, contentState) && (
             <div className="mb-6 bg-amber-100/80 border border-amber-300 rounded-xl p-4">
               <div className="flex items-center">
                 <span className="text-2xl mr-3">👀</span>
@@ -201,7 +276,7 @@ export default function KnowledgeIndex() {
                     正在浏览示例内容
                   </h3>
                   <p className="text-amber-700 text-sm mt-1">
-                    这些是演示数据。
+                    这些是演示数据，仅供查看。
                     <Link
                       to="/auth/register"
                       className="underline font-medium ml-1"
@@ -257,9 +332,9 @@ export default function KnowledgeIndex() {
             <div className="space-y-3 sm:space-y-0 sm:flex sm:flex-wrap sm:gap-4">
               {/* 主题筛选 */}
               <div className="flex-1 sm:flex-none">
-                <label className="hidden sm:block text-sm font-medium text-gray-700 mb-2">
+                <Label className="hidden sm:block text-gray-700 mb-2">
                   学习主题
-                </label>
+                </Label>
                 <div className="flex gap-2">
                   <select
                     value={selectedTopic || ""}
@@ -292,9 +367,9 @@ export default function KnowledgeIndex() {
 
               {/* 标签筛选 */}
               <div className="flex-1 sm:flex-none">
-                <label className="hidden sm:block text-sm font-medium text-gray-700 mb-2">
+                <Label className="hidden sm:block text-gray-700 mb-2">
                   标签筛选
-                </label>
+                </Label>
                 <select
                   value={selectedTag || "all"}
                   onChange={(e) => {
@@ -696,9 +771,9 @@ export default function KnowledgeIndex() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    主题名称 *
-                  </label>
+                  <Label className="mb-2" required>
+                    主题名称
+                  </Label>
                   <input
                     type="text"
                     name="topicName"
@@ -709,9 +784,7 @@ export default function KnowledgeIndex() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    主题描述
-                  </label>
+                  <Label className="text-gray-700 mb-2">主题描述</Label>
                   <textarea
                     name="topicDescription"
                     rows={3}

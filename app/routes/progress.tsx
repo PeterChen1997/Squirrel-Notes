@@ -1,16 +1,18 @@
-import type { LoaderFunctionArgs } from "@remix-run/node";
+import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { redirect, json } from "@remix-run/node";
-import { useLoaderData, useNavigation, Link } from "@remix-run/react";
+import { useLoaderData, useNavigation, Link, Form } from "@remix-run/react";
 import { useState, useEffect } from "react";
 import {
   getLearningTopic,
   getAllLearningTopics,
   getAllTags,
   initDatabase,
+  updateKnowledgePoint,
 } from "~/lib/db.server";
 import { analyzeLearningNote } from "~/lib/openai.server";
 import { getCurrentUser, createAnonymousCookie } from "~/lib/auth.server";
 import Header from "~/components/Header";
+import PageTitle from "~/components/PageTitle";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await initDatabase();
@@ -18,6 +20,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const content = url.searchParams.get("content");
   const topicId = url.searchParams.get("topicId");
+  const knowledgeId = url.searchParams.get("knowledgeId");
 
   if (!content) {
     return redirect("/");
@@ -49,6 +52,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     {
       content,
       topicId,
+      knowledgeId,
       selectedTopic,
       analysis,
       user,
@@ -58,8 +62,45 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   );
 };
 
+export const action = async ({ request }: ActionFunctionArgs) => {
+  await initDatabase();
+
+  const { user, anonymousId } = await getCurrentUser(request);
+  const userId = user?.id || anonymousId;
+
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+
+  if (intent === "update_knowledge") {
+    const knowledgeId = formData.get("knowledgeId") as string;
+    const analysis = JSON.parse(formData.get("analysis") as string);
+
+    if (!knowledgeId) {
+      return json({ error: "缺少知识点ID" }, { status: 400 });
+    }
+
+    try {
+      // 更新知识点 with AI分析结果
+      await updateKnowledgePoint(knowledgeId, {
+        title: analysis.title || "未命名知识点",
+        summary: analysis.summary || "",
+        confidence: analysis.confidence || 0.8,
+        processing_status: "completed",
+      });
+
+      // 跳转到analyze页面
+      return redirect(`/analyze?id=${knowledgeId}`);
+    } catch (error) {
+      console.error("更新知识点失败:", error);
+      return json({ error: "更新失败，请重试" }, { status: 500 });
+    }
+  }
+
+  return json({ error: "未知操作" }, { status: 400 });
+};
+
 export default function ProgressPage() {
-  const { content, analysis, selectedTopic, user, isDemo } =
+  const { content, analysis, selectedTopic, knowledgeId, user, isDemo } =
     useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const [currentStep, setCurrentStep] = useState(0);
@@ -100,17 +141,22 @@ export default function ProgressPage() {
     return () => clearInterval(stepTimer);
   }, []);
 
-  // 3秒后自动跳转到分析结果页
+  // 3秒后自动提交分析结果
   useEffect(() => {
-    const redirectTimer = setTimeout(() => {
-      const params = new URLSearchParams();
-      params.set("content", content);
-      if (selectedTopic?.id) params.set("topicId", selectedTopic.id);
-      window.location.href = `/analyze?${params.toString()}`;
-    }, 4000);
+    if (progress >= 100 && analysis && knowledgeId) {
+      const redirectTimer = setTimeout(() => {
+        // 自动提交表单
+        const form = document.getElementById(
+          "analysis-form"
+        ) as HTMLFormElement;
+        if (form) {
+          form.submit();
+        }
+      }, 1000);
 
-    return () => clearTimeout(redirectTimer);
-  }, [content, selectedTopic]);
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [progress, analysis, knowledgeId]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50 relative overflow-hidden">
@@ -135,15 +181,13 @@ export default function ProgressPage() {
             <div className="text-8xl mb-4 animate-bounce-slow">🐿️</div>
           </div>
 
-          {/* 标题 */}
-          <h2 className="text-2xl md:text-3xl font-bold text-amber-900 mb-4">
-            小松鼠正在整理知识
-          </h2>
-
-          {/* 描述 */}
-          <p className="text-base md:text-lg text-amber-700 mb-8 leading-relaxed">
-            正在用小脑瓜分析你的学习内容，马上就好啦～
-          </p>
+          {/* 页面标题 */}
+          <PageTitle
+            title="小松鼠正在整理知识"
+            subtitle="正在用小脑瓜分析你的学习内容，马上就好啦～"
+            icon="🐿️"
+            className="mb-8"
+          />
 
           {/* 进度条 */}
           <div className="mb-8">
@@ -201,6 +245,19 @@ export default function ProgressPage() {
             <div className="text-green-600 text-base font-medium animate-pulse">
               🎉 收集完成！正在跳转到整理页面...
             </div>
+          )}
+
+          {/* 隐藏的表单，用于提交分析结果 */}
+          {analysis && knowledgeId && (
+            <Form method="post" id="analysis-form" className="hidden">
+              <input type="hidden" name="intent" value="update_knowledge" />
+              <input type="hidden" name="knowledgeId" value={knowledgeId} />
+              <input
+                type="hidden"
+                name="analysis"
+                value={JSON.stringify(analysis)}
+              />
+            </Form>
           )}
         </div>
       </div>

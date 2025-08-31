@@ -16,6 +16,12 @@ import {
 import { analyzeLearningNote } from "~/lib/openai.server";
 import { getCurrentUser, createAnonymousCookie } from "~/lib/auth.server";
 import Header from "~/components/Header";
+import BackLink from "~/components/BackLink";
+import Input from "~/components/Input";
+import Textarea from "~/components/Textarea";
+import Select from "~/components/Select";
+import PageTitle from "~/components/PageTitle";
+import Label from "~/components/Label";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await initDatabase();
@@ -213,6 +219,14 @@ export default function AnalyzePage() {
 
       <div className="px-6 py-12">
         <div className="max-w-4xl mx-auto">
+          {/* 页面标题 */}
+          <PageTitle
+            title="智能分析笔记"
+            subtitle="🤖 AI 已为您分析完成，请检查和编辑结果"
+            icon="✏️"
+            className="mb-8"
+          />
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* 左侧：AI摘要 + 原始内容 */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 space-y-6">
@@ -288,7 +302,7 @@ export default function AnalyzePage() {
 
                 {/* 学习主题选择 - 优化为 select + 自定义输入框 */}
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
-                  <label className="block text-sm font-medium text-blue-900 mb-3 flex items-center">
+                  <Label className="text-blue-900 mb-3 flex items-center">
                     <span className="mr-2">🎯</span>
                     选择学习主题
                     {analysis.recommended_topic && (
@@ -296,11 +310,11 @@ export default function AnalyzePage() {
                         AI 推荐: {analysis.recommended_topic.name}
                       </span>
                     )}
-                  </label>
+                  </Label>
 
                   <div className="space-y-3">
                     {/* 主题选择下拉框 */}
-                    <select
+                    <Select
                       name="learningTopicId"
                       value={editedTopicId}
                       onChange={(e) => {
@@ -314,36 +328,34 @@ export default function AnalyzePage() {
                           setCustomTopicName(analysis.recommended_topic.name);
                         }
                       }}
-                      className="w-full px-4 py-3 border border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                    >
-                      <option value="">不关联学习主题</option>
-                      {topics.map((topic) => (
-                        <option key={topic.id} value={topic.id}>
-                          📚 {topic.name}
-                        </option>
-                      ))}
-                      <option value="__custom__">✨ 自定义新主题</option>
-                    </select>
+                      variant="blue"
+                      options={[
+                        { value: "", label: "不关联学习主题" },
+                        ...topics.map((topic) => ({
+                          value: topic.id!,
+                          label: `📚 ${topic.name}`,
+                        })),
+                        { value: "__custom__", label: "✨ 自定义新主题" },
+                      ]}
+                    />
 
                     {/* 自定义主题输入框 */}
                     {editedTopicId === "__custom__" && (
-                      <div className="bg-white rounded-lg border border-blue-300 p-3">
-                        <label className="block text-sm font-medium text-blue-900 mb-2">
-                          自定义主题名称:
-                        </label>
-                        <input
-                          type="text"
+                      <div className="bg-white dark:bg-gray-800 rounded-lg border border-blue-300 dark:border-blue-600 p-3">
+                        <Input
+                          label="自定义主题名称:"
                           name="customTopicName"
                           value={customTopicName}
                           onChange={(e) => setCustomTopicName(e.target.value)}
-                          className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="输入新的学习主题名称..."
                           required
+                          variant="blue"
+                          size="sm"
                         />
                         {analysis.recommended_topic?.description &&
                           customTopicName ===
                             analysis.recommended_topic.name && (
-                            <p className="text-xs text-blue-600 mt-2">
+                            <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
                               💡 {analysis.recommended_topic.description}
                             </p>
                           )}
@@ -353,40 +365,34 @@ export default function AnalyzePage() {
                 </div>
 
                 {/* 标题编辑 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                    <span className="mr-2">📝</span>
-                    笔记标题
-                  </label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={editedTitle}
-                    onChange={(e) => setEditedTitle(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                    placeholder="为你的学习笔记起个标题..."
-                    required
-                  />
-                </div>
+                <Input
+                  label="📝 笔记标题"
+                  name="title"
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  placeholder="为你的学习笔记起个标题..."
+                  required
+                  variant="amber"
+                />
 
                 {/* 标签管理 + AI 洞察合并 */}
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
-                  <label className="block text-sm font-medium text-green-900 mb-3 flex items-center">
+                  <Label className="text-green-900 mb-3 flex items-center">
                     <span className="mr-2">🏷️</span>
                     智能标签管理
                     <span className="ml-2 px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
                       置信度 {Math.round(analysis.confidence * 100)}%
                     </span>
-                  </label>
+                  </Label>
 
                   {/* 标签输入框 */}
-                  <input
-                    type="text"
+                  <Input
                     name="tags"
                     value={editedTags}
                     onChange={(e) => setEditedTags(e.target.value)}
-                    className="w-full px-4 py-3 border border-green-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white mb-3"
                     placeholder="例如：技术要点, 实践经验, 学习心得"
+                    variant="green"
+                    className="mb-3"
                   />
 
                   {/* AI 推荐标签和关键词（去重后） */}
@@ -444,12 +450,29 @@ export default function AnalyzePage() {
                           .map((tag) => tag.trim())
                           .filter(Boolean)
                           .map((tag, index) => (
-                            <span
+                            <div
                               key={index}
-                              className="px-2 py-1 bg-green-200 text-green-800 text-xs rounded-full border border-green-400 font-medium"
+                              className="flex items-center px-2 py-1 bg-green-200 text-green-800 text-xs rounded-full border border-green-400 font-medium group hover:bg-green-300 transition-colors"
                             >
-                              {tag}
-                            </span>
+                              <span>{tag}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const tags = editedTags
+                                    .split(",")
+                                    .map((t) => t.trim())
+                                    .filter(Boolean);
+                                  const newTags = tags.filter(
+                                    (_, i) => i !== index
+                                  );
+                                  setEditedTags(newTags.join(", "));
+                                }}
+                                className="ml-1 text-green-600 hover:text-green-800 opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="删除标签"
+                              >
+                                ×
+                              </button>
+                            </div>
                           ))}
                       </div>
                     </div>

@@ -6,6 +6,7 @@ import {
   type MetaFunction,
 } from "@remix-run/node";
 import { Form, Link, useActionData, useNavigation } from "@remix-run/react";
+import Label from "~/components/Label";
 import {
   loginUser,
   createSession,
@@ -116,12 +117,9 @@ export default function Login() {
               )}
 
               <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-amber-900 mb-2"
-                >
+                <Label htmlFor="email" className="text-amber-900 mb-2">
                   邮箱地址
-                </label>
+                </Label>
                 <input
                   type="email"
                   id="email"
@@ -133,12 +131,9 @@ export default function Login() {
               </div>
 
               <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-amber-900 mb-2"
-                >
+                <Label htmlFor="password" className="text-amber-900 mb-2">
                   密码
-                </label>
+                </Label>
                 <input
                   type="password"
                   id="password"

@@ -15,6 +15,12 @@ import {
 import { getCurrentUser, createAnonymousCookie } from "~/lib/auth.server";
 import { json, redirect } from "@remix-run/node";
 import Header from "~/components/Header";
+import BackLink from "~/components/BackLink";
+import Input from "~/components/Input";
+import Textarea from "~/components/Textarea";
+import Select from "~/components/Select";
+import PageTitle from "~/components/PageTitle";
+import Label from "~/components/Label";
 
 export const loader = async ({ params, request }: LoaderFunctionArgs) => {
   await initDatabase();
@@ -204,6 +210,26 @@ export default function KnowledgeDetailPage() {
 
       <div className="px-6 py-8">
         <div className="max-w-6xl mx-auto">
+          {/* 返回链接 */}
+          <div className="mb-6">
+            {learningTopic ? (
+              <BackLink
+                to={`/knowledge/topic/${learningTopic.id}`}
+                text="返回主题详情"
+              />
+            ) : (
+              <BackLink to="/knowledge" text="返回知识库" />
+            )}
+          </div>
+
+          {/* 页面标题 */}
+          <PageTitle
+            title="笔记详情"
+            subtitle="📝 查看和编辑你的学习笔记"
+            icon="📖"
+            className="mb-6"
+          />
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* 主要内容区域 */}
             <div className="lg:col-span-2">
@@ -220,62 +246,50 @@ export default function KnowledgeDetailPage() {
 
                     <div className="space-y-6">
                       {/* 标题编辑 */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          标题
-                        </label>
-                        <input
-                          type="text"
-                          name="title"
-                          value={editedTitle}
-                          onChange={(e) => setEditedTitle(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xl font-semibold"
-                          placeholder="输入标题..."
-                        />
-                      </div>
+                      <Input
+                        label="标题"
+                        name="title"
+                        value={editedTitle}
+                        onChange={(e) => setEditedTitle(e.target.value)}
+                        placeholder="输入标题..."
+                        variant="blue"
+                        size="lg"
+                        className="text-xl font-semibold"
+                      />
 
                       {/* 内容编辑 */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          内容
-                        </label>
-                        <textarea
-                          name="content"
-                          value={editedContent}
-                          onChange={(e) => setEditedContent(e.target.value)}
-                          rows={12}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                          placeholder="输入学习内容..."
-                          required
-                        />
-                      </div>
+                      <Textarea
+                        label="内容"
+                        name="content"
+                        value={editedContent}
+                        onChange={(e) => setEditedContent(e.target.value)}
+                        rows={12}
+                        placeholder="输入学习内容..."
+                        required
+                        variant="blue"
+                      />
 
                       {/* 标签编辑 */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          标签 (用逗号分隔)
-                        </label>
-                        <input
-                          type="text"
-                          name="tags"
-                          value={editedTags}
-                          onChange={(e) => setEditedTags(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="标签1, 标签2"
-                        />
-                      </div>
+                      <Input
+                        label="标签 (用逗号分隔)"
+                        name="tags"
+                        value={editedTags}
+                        onChange={(e) => setEditedTags(e.target.value)}
+                        placeholder="标签1, 标签2"
+                        variant="blue"
+                      />
                     </div>
 
                     {/* 学习主题选择 */}
                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
-                      <label className="block text-sm font-medium text-blue-900 mb-3 flex items-center">
+                      <Label className="text-blue-900 mb-3 flex items-center">
                         <span className="mr-2">🎯</span>
                         选择学习主题
-                      </label>
+                      </Label>
 
                       <div className="space-y-3">
                         {/* 主题选择下拉框 */}
-                        <select
+                        <Select
                           name="learningTopicId"
                           value={editedTopicId}
                           onChange={(e) => {
@@ -284,33 +298,31 @@ export default function KnowledgeDetailPage() {
                               setCustomTopicName("");
                             }
                           }}
-                          className="w-full px-4 py-3 border border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                        >
-                          <option value="">不关联学习主题</option>
-                          {allTopics.map((topic) => (
-                            <option key={topic.id} value={topic.id}>
-                              📚 {topic.name}
-                            </option>
-                          ))}
-                          <option value="__custom__">✨ 自定义新主题</option>
-                        </select>
+                          variant="blue"
+                          options={[
+                            { value: "", label: "不关联学习主题" },
+                            ...allTopics.map((topic) => ({
+                              value: topic.id!,
+                              label: `📚 ${topic.name}`,
+                            })),
+                            { value: "__custom__", label: "✨ 自定义新主题" },
+                          ]}
+                        />
 
                         {/* 自定义主题输入框 */}
                         {editedTopicId === "__custom__" && (
-                          <div className="bg-white rounded-lg border border-blue-300 p-3">
-                            <label className="block text-sm font-medium text-blue-900 mb-2">
-                              自定义主题名称:
-                            </label>
-                            <input
-                              type="text"
+                          <div className="bg-white dark:bg-gray-800 rounded-lg border border-blue-300 dark:border-blue-600 p-3">
+                            <Input
+                              label="自定义主题名称:"
                               name="customTopicName"
                               value={customTopicName}
                               onChange={(e) =>
                                 setCustomTopicName(e.target.value)
                               }
-                              className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               placeholder="输入新的学习主题名称..."
                               required
+                              variant="blue"
+                              size="sm"
                             />
                           </div>
                         )}
@@ -322,9 +334,35 @@ export default function KnowledgeDetailPage() {
                       <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all"
+                        className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 disabled:bg-blue-400 disabled:cursor-not-allowed transition-all flex items-center"
                       >
-                        {isSubmitting ? "保存中..." : "保存更改"}
+                        {isSubmitting ? (
+                          <>
+                            <svg
+                              className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
+                            </svg>
+                            保存中...
+                          </>
+                        ) : (
+                          "保存更改"
+                        )}
                       </button>
                       <button
                         type="button"
@@ -568,6 +606,17 @@ export default function KnowledgeDetailPage() {
                   >
                     浏览知识库
                   </Link>
+
+                  {/* 返回主题详情链接 */}
+                  {learningTopic && (
+                    <div className="pt-3 border-t border-gray-100">
+                      <BackLink
+                        to={`/knowledge/topic/${learningTopic.id}`}
+                        text="返回主题详情"
+                        className="w-full justify-center py-2"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

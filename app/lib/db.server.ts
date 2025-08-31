@@ -1127,19 +1127,17 @@ export async function createDemoData() {
     return; // 已有示例数据，跳过
   }
 
+  console.log("创建demo数据...");
+
   // 创建示例学习主题
   const demoTopics = [
     {
       name: "网球技能",
-      description: "网球技能学习记录",
+      description: "网球技能学习记录，包含发球、击球、战术等技巧",
     },
     {
       name: "编程学习",
-      description: "编程技能提升笔记",
-    },
-    {
-      name: "英语学习",
-      description: "英语技能提升记录",
+      description: "编程技能提升笔记，涵盖前端、后端、算法等知识",
     },
   ];
 
@@ -1152,24 +1150,107 @@ export async function createDemoData() {
     );
 
     // 为每个主题创建示例知识点
-    const samplePoints = [
-      {
-        title: `${topic.name}入门要点`,
-        content: `这是关于${topic.name}的基础知识要点，包含核心概念和基本技能。`,
-        tags: ["基础", "入门"],
-        keywords: [topic.name, "基础"],
-        importance: 4,
-        confidence: 0.85,
-      },
-      {
-        title: `${topic.name}进阶技巧`,
-        content: `这是关于${topic.name}的进阶内容，适合有一定基础的学习者。`,
-        tags: ["进阶", "技巧"],
-        keywords: [topic.name, "进阶"],
-        importance: 3,
-        confidence: 0.78,
-      },
-    ];
+    const samplePoints =
+      topic.name === "网球技能"
+        ? [
+            {
+              title: "网球正手击球技巧",
+              content: `今天网球课学习了正手击球的关键要点：
+
+1. 站位：双脚与肩同宽，侧身对网
+2. 握拍：大陆式握拍，拇指和食指形成V字
+3. 引拍：拍头指向后场，肘部弯曲
+4. 击球点：在身体前方，腰部高度
+5. 随挥：击球后拍子继续向前上方挥动
+
+重点是要保持身体平衡，转动腰部带动手臂发力。`,
+              tags: ["正手", "击球", "技巧"],
+              keywords: ["网球", "正手", "击球", "站位", "握拍"],
+              importance: 5,
+              confidence: 0.9,
+            },
+            {
+              title: "网球发球动作要领",
+              content: `网球发球是比赛中的关键环节，今天重点练习了：
+
+发球动作分解：
+1. 准备姿势：双脚分开，前脚脚尖指向目标
+2. 抛球：左手抛球，球要抛到右肩上方
+3. 引拍：右手引拍，拍头指向地面
+4. 击球：在最高点击球，手腕发力
+5. 随挥：击球后拍子继续向前
+
+注意事项：抛球要稳定，击球时机要准确，力量要适中。`,
+              tags: ["发球", "动作", "要领"],
+              keywords: ["网球", "发球", "抛球", "击球", "随挥"],
+              importance: 4,
+              confidence: 0.85,
+            },
+          ]
+        : [
+            {
+              title: "React Hooks 使用技巧",
+              content: `今天学习了React Hooks的核心概念和使用技巧：
+
+useState Hook:
+- 用于管理组件状态
+- 返回当前状态和更新函数
+- 每次渲染都会创建新的状态
+
+useEffect Hook:
+- 用于处理副作用
+- 依赖数组为空时只执行一次
+- 可以返回清理函数
+
+useContext Hook:
+- 用于跨组件传递数据
+- 避免props drilling
+- 配合Provider使用
+
+重点是要理解Hooks的执行时机和依赖关系。`,
+              tags: ["React", "Hooks", "前端"],
+              keywords: [
+                "React",
+                "Hooks",
+                "useState",
+                "useEffect",
+                "useContext",
+              ],
+              importance: 5,
+              confidence: 0.92,
+            },
+            {
+              title: "JavaScript 异步编程",
+              content: `深入学习了JavaScript异步编程的几种方式：
+
+1. Promise:
+- 解决回调地狱问题
+- 支持链式调用
+- 有then、catch、finally方法
+
+2. async/await:
+- 基于Promise的语法糖
+- 代码更易读
+- 错误处理用try-catch
+
+3. Generator函数:
+- 可以暂停和恢复执行
+- 配合yield使用
+- 适合处理复杂异步流程
+
+实际项目中async/await最常用，代码简洁易懂。`,
+              tags: ["JavaScript", "异步", "编程"],
+              keywords: [
+                "JavaScript",
+                "Promise",
+                "async",
+                "await",
+                "Generator",
+              ],
+              importance: 4,
+              confidence: 0.88,
+            },
+          ];
 
     for (const point of samplePoints) {
       await pool.query(

@@ -17,6 +17,35 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // 处理注销
+  const handleLogout = async () => {
+    try {
+      // 关闭移动端菜单
+      setIsMobileMenuOpen(false);
+
+      // 发送注销请求
+      const response = await fetch("/auth/logout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      });
+
+      if (response.ok) {
+        // 强制刷新页面
+        window.location.href = "/";
+      } else {
+        console.error("注销失败");
+        // 即使失败也重定向到首页
+        window.location.href = "/";
+      }
+    } catch (error) {
+      console.error("注销请求失败:", error);
+      // 出错时也重定向到首页
+      window.location.href = "/";
+    }
+  };
+
   const isActiveLink = (path: string) => {
     if (path === "/" && location.pathname === "/") return true;
     if (path !== "/" && location.pathname.startsWith(path)) return true;
@@ -71,12 +100,12 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
         {/* 桌面端导航 */}
         <div className="hidden md:flex items-center space-x-4">
           {/* Demo提示 */}
-          {isDemo && (
+          {/* {isDemo && (
             <div className="flex items-center bg-amber-200/50 px-3 py-1 rounded-full text-xs text-amber-700">
               <span className="mr-1">👀</span>
               正在浏览示例内容
             </div>
-          )}
+          )} */}
 
           {/* 导航链接 */}
           {navigationLinks.map((link) => (
@@ -116,15 +145,14 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
                   <div className="text-xs text-amber-600">{user.email}</div>
                 </div>
               </div>
-              <Form method="post" action="/auth/logout" reloadDocument>
-                <button
-                  type="submit"
-                  className="text-amber-600 hover:text-amber-800 text-sm font-medium flex items-center transition-colors px-2 py-1 rounded hover:bg-amber-50"
-                >
-                  <span className="mr-1">👋</span>
-                  <span className="hidden lg:inline">注销</span>
-                </button>
-              </Form>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="text-amber-600 hover:text-amber-800 text-sm font-medium flex items-center transition-colors px-2 py-1 rounded hover:bg-amber-50"
+              >
+                <span className="mr-1">👋</span>
+                <span className="hidden lg:inline">注销</span>
+              </button>
             </div>
           ) : (
             <div className="flex items-center space-x-2 ml-4 pl-4 border-l border-amber-200">
@@ -241,16 +269,14 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
                     <div className="text-xs text-amber-600">{user.email}</div>
                   </div>
                 </div>
-                <Form method="post" action="/auth/logout" reloadDocument>
-                  <button
-                    type="submit"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="w-full flex items-center space-x-3 px-3 py-3 text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-lg transition-colors"
-                  >
-                    <span className="text-lg">👋</span>
-                    <span className="font-medium">注销</span>
-                  </button>
-                </Form>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full flex items-center space-x-3 px-3 py-3 text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-lg transition-colors"
+                >
+                  <span className="text-lg">👋</span>
+                  <span className="font-medium">注销</span>
+                </button>
               </div>
             ) : (
               <div className="border-t border-amber-100 mt-3 pt-3 mx-2 space-y-1">

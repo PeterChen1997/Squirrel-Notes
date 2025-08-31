@@ -11,8 +11,9 @@ body {
   }
 }
 
-/* 确保输入框在黑暗模式下有适当的颜色对比度 */
+/* 统一输入框样式，确保在黑暗模式下正常工作 */
 @layer base {
+  /* 基础输入框样式 */
   input,
   textarea,
   select {
@@ -20,35 +21,81 @@ body {
     @apply bg-white dark:bg-gray-800;
     @apply border-gray-300 dark:border-gray-600;
     @apply placeholder-gray-500 dark:placeholder-gray-400;
+    @apply focus:border-blue-500 dark:focus:border-blue-400;
+    @apply focus:ring-blue-500 dark:focus:ring-blue-400;
+    @apply focus:outline-none;
   }
 
-  input:focus,
-  textarea:focus,
-  select:focus {
-    @apply border-blue-500 dark:border-blue-400;
-    @apply ring-blue-500 dark:ring-blue-400;
+  /* 特殊颜色主题的输入框 */
+  input[class*="border-amber"],
+  textarea[class*="border-amber"],
+  select[class*="border-amber"] {
+    @apply border-amber-200 dark:border-amber-600;
+    @apply focus:border-amber-500 dark:focus:border-amber-400;
+    @apply focus:ring-amber-500 dark:focus:ring-amber-400;
   }
 
-  /* 特殊的自定义样式覆盖 */
-  .dark input[class*="border-amber"],
-  .dark textarea[class*="border-amber"],
-  .dark select[class*="border-amber"] {
-    @apply bg-gray-800 border-gray-600 text-gray-100 placeholder-gray-400;
+  input[class*="border-green"],
+  textarea[class*="border-green"],
+  select[class*="border-green"] {
+    @apply border-green-200 dark:border-green-600;
+    @apply focus:border-green-500 dark:focus:border-green-400;
+    @apply focus:ring-green-500 dark:focus:ring-green-400;
   }
 
-  .dark input[class*="border-amber"]:focus,
-  .dark textarea[class*="border-amber"]:focus,
-  .dark select[class*="border-amber"]:focus {
-    @apply border-amber-400 ring-amber-400;
+  input[class*="border-blue"],
+  textarea[class*="border-blue"],
+  select[class*="border-blue"] {
+    @apply border-blue-200 dark:border-blue-600;
+    @apply focus:border-blue-500 dark:focus:border-blue-400;
+    @apply focus:ring-blue-500 dark:focus:ring-blue-400;
   }
 
-  .dark input[class*="bg-amber"],
-  .dark textarea[class*="bg-amber"] {
-    @apply bg-gray-800 text-gray-100;
+  /* 背景色覆盖 */
+  input[class*="bg-amber"],
+  textarea[class*="bg-amber"] {
+    @apply bg-amber-50 dark:bg-gray-800;
   }
 
-  .dark input[class*="text-amber"],
-  .dark textarea[class*="text-amber"] {
-    @apply text-gray-100;
+  input[class*="bg-green"],
+  textarea[class*="bg-green"] {
+    @apply bg-green-50 dark:bg-gray-800;
+  }
+
+  input[class*="bg-blue"],
+  textarea[class*="bg-blue"] {
+    @apply bg-blue-50 dark:bg-gray-800;
+  }
+
+  /* 文本颜色覆盖 */
+  input[class*="text-amber"],
+  textarea[class*="text-amber"] {
+    @apply text-amber-900 dark:text-gray-100;
+  }
+
+  input[class*="text-green"],
+  textarea[class*="text-green"] {
+    @apply text-green-900 dark:text-gray-100;
+  }
+
+  input[class*="text-blue"],
+  textarea[class*="text-blue"] {
+    @apply text-blue-900 dark:text-gray-100;
+  }
+
+  /* 占位符颜色覆盖 */
+  input[class*="placeholder-amber"],
+  textarea[class*="placeholder-amber"] {
+    @apply placeholder-amber-400 dark:placeholder-gray-400;
+  }
+
+  input[class*="placeholder-green"],
+  textarea[class*="placeholder-green"] {
+    @apply placeholder-green-400 dark:placeholder-gray-400;
+  }
+
+  input[class*="placeholder-blue"],
+  textarea[class*="placeholder-blue"] {
+    @apply placeholder-blue-400 dark:placeholder-gray-400;
   }
 }

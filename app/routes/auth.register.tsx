@@ -6,6 +6,7 @@ import {
   type MetaFunction,
 } from "@remix-run/node";
 import { Form, Link, useActionData, useNavigation } from "@remix-run/react";
+import Label from "~/components/Label";
 import {
   registerUser,
   createSession,
@@ -124,12 +125,9 @@ export default function Register() {
               )}
 
               <div>
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-medium text-amber-900 mb-2"
-                >
+                <Label htmlFor="name" className="text-amber-900 mb-2">
                   姓名 <span className="text-amber-500 text-xs">(可选)</span>
-                </label>
+                </Label>
                 <input
                   type="text"
                   id="name"
@@ -140,12 +138,9 @@ export default function Register() {
               </div>
 
               <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-amber-900 mb-2"
-                >
-                  邮箱地址 <span className="text-red-500">*</span>
-                </label>
+                <Label htmlFor="email" className="text-amber-900 mb-2" required>
+                  邮箱地址
+                </Label>
                 <input
                   type="email"
                   id="email"
@@ -157,12 +152,13 @@ export default function Register() {
               </div>
 
               <div>
-                <label
+                <Label
                   htmlFor="password"
-                  className="block text-sm font-medium text-amber-900 mb-2"
+                  className="text-amber-900 mb-2"
+                  required
                 >
-                  密码 <span className="text-red-500">*</span>
-                </label>
+                  密码
+                </Label>
                 <input
                   type="password"
                   id="password"
@@ -174,12 +170,13 @@ export default function Register() {
               </div>
 
               <div>
-                <label
+                <Label
                   htmlFor="confirmPassword"
-                  className="block text-sm font-medium text-amber-900 mb-2"
+                  className="text-amber-900 mb-2"
+                  required
                 >
-                  确认密码 <span className="text-red-500">*</span>
-                </label>
+                  确认密码
+                </Label>
                 <input
                   type="password"
                   id="confirmPassword"
