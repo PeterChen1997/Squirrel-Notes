@@ -1,10 +1,19 @@
-import type { MetaFunction, LoaderFunctionArgs } from "@remix-run/node";
+import type {
+  MetaFunction,
+  LoaderFunctionArgs,
+  ActionFunctionArgs,
+} from "@remix-run/node";
 import { useState, useRef } from "react";
 import { Form, useNavigation, useLoaderData, Link } from "@remix-run/react";
-import { json } from "@remix-run/node";
-import { getAllLearningTopics } from "~/lib/db.server";
-import { initDatabase } from "~/lib/db.server";
+import { json, redirect } from "@remix-run/node";
+import {
+  getAllLearningTopics,
+  initDatabase,
+  createKnowledgePoint,
+  getAllTags,
+} from "~/lib/db.server";
 import { getCurrentUser, createAnonymousCookie } from "~/lib/auth.server";
+import { analyzeLearningNote } from "~/lib/openai.server";
 import Header from "~/components/Header";
 
 export const meta: MetaFunction = () => {
@@ -19,20 +28,68 @@ export const meta: MetaFunction = () => {
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await initDatabase();
-  const { user, anonymousId, isDemo } = await getCurrentUser(request);
+  const {
+    user,
+    anonymousId,
+    isDemo,
+    headers: authHeaders,
+  } = await getCurrentUser(request);
 
   // 根据用户状态获取主题
   const userId = user?.id || anonymousId;
   const topics = await getAllLearningTopics(userId);
 
-  const headers: HeadersInit = {};
-  if (anonymousId && !user) {
-    headers["Set-Cookie"] = createAnonymousCookie(anonymousId);
-  }
-
   const responseData = { topics, user, isDemo };
 
-  return json(responseData, { headers });
+  return json(responseData, { headers: authHeaders });
+};
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { user, anonymousId, isDemo } = await getCurrentUser(request);
+  const userId = user?.id || anonymousId;
+
+  const formData = await request.formData();
+  const content = formData.get("content") as string;
+
+  if (!content?.trim()) {
+    return json({ error: "内容不能为空" }, { status: 400 });
+  }
+
+  try {
+    // 获取现有主题和标签信息用于AI分析
+    const topics = await getAllLearningTopics(userId);
+    const existingTags = await getAllTags(userId);
+
+    // AI 分析内容
+    const analysis = await analyzeLearningNote(
+      content,
+      topics
+        .filter((t) => t.id)
+        .map((t) => ({ id: t.id!, name: t.name, description: t.description })),
+      existingTags
+    );
+
+    // 立即保存到数据库
+    const savedKnowledge = await createKnowledgePoint({
+      title: analysis.title || content.substring(0, 50) + "...", // 使用AI生成的标题或内容前50字符
+      user_id: userId,
+      content: content.trim(),
+      learning_topic_id: undefined, // 先不关联主题，在analyze页面编辑时再关联
+      summary: analysis.summary, // 保存AI摘要
+      tag_ids: [], // 先不添加标签，在analyze页面编辑时再添加
+      keywords: [], // 先不添加关键词
+      confidence: analysis.confidence || 0.8,
+      related_ids: [],
+      attachments: [],
+      processing_status: "completed",
+    });
+
+    // 跳转到analyze页面进行编辑
+    return redirect(`/analyze?id=${savedKnowledge.id}`);
+  } catch (error) {
+    console.error("保存笔记失败:", error);
+    return json({ error: "保存失败，请重试" }, { status: 500 });
+  }
 };
 
 export default function Index() {
@@ -123,7 +180,7 @@ export default function Index() {
             </p>
           </div>
 
-          <Form method="post" action="/analyze" className="space-y-6">
+          <Form method="post" className="space-y-6">
             {/* 输入区域 */}
             <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-200 overflow-hidden animate-slide-up relative z-10">
               {/* 输入模式切换 */}

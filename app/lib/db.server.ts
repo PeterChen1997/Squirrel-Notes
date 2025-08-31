@@ -2,6 +2,16 @@ import "dotenv/config";
 import pg from "pg";
 import { v4 as uuidv4 } from "uuid";
 
+// 开发环境导入会话调试工具
+if (process.env.NODE_ENV !== "production") {
+  import("./session-debug.server")
+    .then(({ debugSessions }) => {
+      // 启动时执行一次调试
+      setTimeout(debugSessions, 2000);
+    })
+    .catch(console.error);
+}
+
 const { Pool } = pg;
 
 // 数据库连接池
@@ -791,6 +801,7 @@ export async function updateTopicOverviewAsync(topicId: string) {
         ? row.keywords
         : JSON.parse(row.keywords || "[]"),
       created_at: row.created_at,
+      tags: [], // 暂时设置为空数组，避免类型错误
     }));
 
     // 生成AI概览
@@ -986,16 +997,31 @@ export async function createUserSession(session: UserSession) {
 
 // 获取用户会话
 export async function getUserSession(sessionId: string) {
-  const result = await pool.query(
-    `SELECT us.*, u.email, u.name, u.avatar_url 
-     FROM user_sessions us
-     JOIN users u ON us.user_id = u.id
-     WHERE us.id = $1 AND us.expires_at > NOW()`,
-    [sessionId]
-  );
-  return result.rows[0] as
-    | (UserSession & Pick<User, "email" | "name" | "avatar_url">)
-    | undefined;
+  try {
+    const result = await pool.query(
+      `SELECT us.*, u.email, u.name, u.avatar_url 
+       FROM user_sessions us
+       JOIN users u ON us.user_id = u.id
+       WHERE us.id = $1 AND us.expires_at > CURRENT_TIMESTAMP`,
+      [sessionId]
+    );
+
+    // 如果会话过期，自动清理
+    if (result.rows.length === 0) {
+      // 尝试删除过期的会话（如果存在）
+      await pool.query(
+        "DELETE FROM user_sessions WHERE id = $1 AND expires_at <= CURRENT_TIMESTAMP",
+        [sessionId]
+      );
+    }
+
+    return result.rows[0] as
+      | (UserSession & Pick<User, "email" | "name" | "avatar_url">)
+      | undefined;
+  } catch (error) {
+    console.error("查询用户会话失败:", error);
+    return undefined;
+  }
 }
 
 // 删除用户会话

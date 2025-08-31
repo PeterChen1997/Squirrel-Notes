@@ -22,11 +22,11 @@ export const meta: MetaFunction = () => {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { user } = await getCurrentUser(request);
+  const { user, headers: authHeaders } = await getCurrentUser(request);
   if (user) {
     return redirect("/");
   }
-  return json({});
+  return json({}, { headers: authHeaders });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {

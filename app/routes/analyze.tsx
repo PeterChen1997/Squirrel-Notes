@@ -3,7 +3,8 @@ import { redirect, json } from "@remix-run/node";
 import { useState } from "react";
 import { Form, useLoaderData, useNavigation, Link } from "@remix-run/react";
 import {
-  createKnowledgePoint,
+  getKnowledgePoint,
+  updateKnowledgePoint,
   getLearningTopic,
   getAllLearningTopics,
   getAllKnowledgePoints,
@@ -19,34 +20,46 @@ import Header from "~/components/Header";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await initDatabase();
 
-  const { user, anonymousId, isDemo } = await getCurrentUser(request);
+  const {
+    user,
+    anonymousId,
+    isDemo,
+    headers: authHeaders,
+  } = await getCurrentUser(request);
   const userId = user?.id || anonymousId;
 
   const url = new URL(request.url);
-  const content = url.searchParams.get("content");
-  const topicId = url.searchParams.get("topicId");
+  const knowledgeId = url.searchParams.get("id");
 
-  if (!content) {
+  if (!knowledgeId) {
+    return redirect("/");
+  }
+
+  // 获取已保存的知识点
+  const knowledgePoint = await getKnowledgePoint(knowledgeId, userId);
+  if (!knowledgePoint) {
     return redirect("/");
   }
 
   // 获取现有主题和标签信息
   const topics = await getAllLearningTopics(userId);
-  const selectedTopic = topicId ? await getLearningTopic(topicId) : null;
+  const selectedTopic = knowledgePoint.learning_topic_id
+    ? await getLearningTopic(knowledgePoint.learning_topic_id)
+    : null;
   const existingTags = await getAllTags(userId);
 
-  // AI 分析内容
-  const analysis = await analyzeLearningNote(content, topics, existingTags);
-
-  const headers: HeadersInit = {};
-  if (anonymousId && !user) {
-    headers["Set-Cookie"] = createAnonymousCookie(anonymousId);
-  }
+  // 重新分析内容，提供编辑建议
+  const analysis = await analyzeLearningNote(
+    knowledgePoint.content,
+    topics
+      .filter((t) => t.id)
+      .map((t) => ({ id: t.id!, name: t.name, description: t.description })),
+    existingTags
+  );
 
   return json(
     {
-      content,
-      topicId,
+      knowledgePoint,
       selectedTopic,
       topics,
       existingTags,
@@ -54,7 +67,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       user,
       isDemo,
     },
-    { headers }
+    { headers: authHeaders }
   );
 };
 
@@ -83,15 +96,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return redirect(`/progress?${params.toString()}`);
   }
 
-  if (intent === "save") {
-    // 处理保存请求
+  if (intent === "update") {
+    // 处理更新请求
+    const knowledgeId = formData.get("knowledgeId") as string;
     const content = formData.get("content") as string;
     const title = formData.get("title") as string;
     let learningTopicId = formData.get("learningTopicId") as string;
     const tags = formData.get("tags") as string;
 
-    if (!content || !title) {
+    if (!knowledgeId || !content || !title) {
       throw new Error("缺少必要信息");
+    }
+
+    // 验证知识点归属
+    const existingKnowledge = await getKnowledgePoint(knowledgeId, userId);
+    if (!existingKnowledge) {
+      return json({ error: "知识点不存在或无权限" }, { status: 404 });
     }
 
     // 处理创建新主题的情况
@@ -119,28 +139,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       : [];
     const createdTags =
       tagNames.length > 0 ? await createOrGetTags(tagNames, userId) : [];
-    const tagIds = createdTags.map((tag) => tag.id).filter(Boolean);
+    const tagIds = createdTags
+      .map((tag) => tag.id)
+      .filter((id): id is string => Boolean(id));
 
     // 获取 AI 分析摘要
     const summaryFromForm = formData.get("summary") as string;
 
-    // 创建知识点（移除重要程度，使用默认值）
-    const knowledgePoint = await createKnowledgePoint({
+    // 更新知识点
+    await updateKnowledgePoint(knowledgeId, {
       title,
       content,
       summary: summaryFromForm || undefined, // 保存 AI 摘要
       tag_ids: tagIds,
       keywords: [],
-
-      confidence: 0.8,
       learning_topic_id: learningTopicId || undefined,
-      related_ids: [],
-      attachments: [],
-      processing_status: "completed",
-      user_id: userId,
     });
 
-    return redirect(`/knowledge/${knowledgePoint.id}`);
+    return redirect(`/knowledge/${knowledgeId}?updated=true`);
   }
 
   return null;
@@ -148,7 +164,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 export default function AnalyzePage() {
   const {
-    content,
+    knowledgePoint,
     analysis,
     selectedTopic,
     topics,
@@ -157,11 +173,19 @@ export default function AnalyzePage() {
     isDemo,
   } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
-  const [editedTitle, setEditedTitle] = useState(analysis.title);
+  const [editedTitle, setEditedTitle] = useState(
+    knowledgePoint.title || analysis.title
+  );
   const [editedTags, setEditedTags] = useState(
-    analysis.suggested_tags.join(", ")
+    knowledgePoint.tags
+      ?.map((tag) => (typeof tag === "string" ? tag : tag.name))
+      .join(", ") || analysis.suggested_tags.join(", ")
   );
   const [editedTopicId, setEditedTopicId] = useState(() => {
+    // 优先使用现有知识点的主题
+    if (selectedTopic?.id) {
+      return selectedTopic.id;
+    }
     // 如果AI推荐了现有主题，自动选中
     if (analysis.recommended_topic?.existing_topic_id) {
       return analysis.recommended_topic.existing_topic_id;
@@ -213,7 +237,7 @@ export default function AnalyzePage() {
                 </h3>
                 <div className="bg-gray-50 rounded-xl p-4">
                   <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                    {content}
+                    {knowledgePoint.content}
                   </p>
                 </div>
               </div>
@@ -239,8 +263,17 @@ export default function AnalyzePage() {
               </h3>
 
               <Form method="post" className="space-y-6">
-                <input type="hidden" name="intent" value="save" />
-                <input type="hidden" name="content" value={content} />
+                <input type="hidden" name="intent" value="update" />
+                <input
+                  type="hidden"
+                  name="knowledgeId"
+                  value={knowledgePoint.id}
+                />
+                <input
+                  type="hidden"
+                  name="content"
+                  value={knowledgePoint.content}
+                />
                 <input
                   type="hidden"
                   name="summary"
@@ -433,12 +466,12 @@ export default function AnalyzePage() {
                     {isSubmitting ? (
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                        小松鼠收藏中...
+                        小松鼠更新中...
                       </div>
                     ) : (
                       <span className="flex items-center justify-center">
-                        <span className="mr-2">🌰</span>
-                        收藏到知识库
+                        <span className="mr-2">✏️</span>
+                        更新笔记
                       </span>
                     )}
                   </button>

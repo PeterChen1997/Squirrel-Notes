@@ -70,9 +70,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
             __html: `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
+                  // 开发环境提示
+                  const isDev = window.location.hostname === 'localhost' || 
+                               window.location.hostname === '127.0.0.1' ||
+                               window.location.port === '5173';
+                  
                   navigator.serviceWorker.register('/sw.js')
-                    .then(registration => console.log('SW registered'))
-                    .catch(error => console.log('SW registration failed'));
+                    .then(registration => {
+                      console.log('SW registered');
+                      if (isDev) {
+                        console.log('🔥 开发环境：Service Worker 使用 Network First 策略，应该能看到最新内容');
+                      }
+                    })
+                    .catch(error => console.log('SW registration failed', error));
                 });
               }
             `,

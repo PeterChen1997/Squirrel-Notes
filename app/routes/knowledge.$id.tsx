@@ -24,7 +24,12 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
     throw new Response("Not Found", { status: 404 });
   }
 
-  const { user, anonymousId, isDemo } = await getCurrentUser(request);
+  const {
+    user,
+    anonymousId,
+    isDemo,
+    headers: authHeaders,
+  } = await getCurrentUser(request);
   const userId = user?.id || anonymousId;
 
   const knowledgePoint = await getKnowledgePoint(id, userId);
@@ -76,11 +81,6 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
   // 获取所有现有标签
   const allTags = await getAllTags(userId);
 
-  const headers: HeadersInit = {};
-  if (anonymousId && !user) {
-    headers["Set-Cookie"] = createAnonymousCookie(anonymousId);
-  }
-
   return json(
     {
       knowledgePoint,
@@ -91,7 +91,7 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
       user,
       isDemo,
     },
-    { headers }
+    { headers: authHeaders }
   );
 };
 

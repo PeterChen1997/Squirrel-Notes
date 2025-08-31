@@ -16,7 +16,12 @@ export const meta: MetaFunction = () => {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { user, anonymousId, isDemo } = await getCurrentUser(request);
+  const {
+    user,
+    anonymousId,
+    isDemo,
+    headers: authHeaders,
+  } = await getCurrentUser(request);
   const userId = user?.id || anonymousId;
 
   const [topics, knowledgePoints] = await Promise.all([
@@ -57,11 +62,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     return timeB - timeA;
   });
 
-  const headers: HeadersInit = {};
-  if (anonymousId && !user) {
-    headers["Set-Cookie"] = createAnonymousCookie(anonymousId);
-  }
-
   return json(
     {
       topics: topicsWithStats,
@@ -70,7 +70,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       user,
       isDemo,
     },
-    { headers }
+    { headers: authHeaders }
   );
 };
 

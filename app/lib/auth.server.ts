@@ -14,6 +14,21 @@ import {
   type UserSession,
 } from "./db.server";
 
+// 标准的 Cookie 解析函数
+function parseCookies(cookieHeader: string | null): Record<string, string> {
+  const cookies: Record<string, string> = {};
+  if (!cookieHeader) return cookies;
+
+  cookieHeader.split(";").forEach((cookie) => {
+    const [name, ...rest] = cookie.split("=");
+    if (name && rest.length > 0) {
+      cookies[name.trim()] = rest.join("=").trim();
+    }
+  });
+
+  return cookies;
+}
+
 // 生成匿名用户ID
 export function generateAnonymousId(): string {
   return `anon_${uuidv4()}`;
@@ -24,9 +39,9 @@ export async function getOrCreateAnonymousId(
   request: Request
 ): Promise<string> {
   const cookieHeader = request.headers.get("Cookie");
-  const cookies = new URLSearchParams(cookieHeader?.replace(/; /g, "&") || "");
+  const cookies = parseCookies(cookieHeader);
 
-  let anonymousId = cookies.get("anonymous_id");
+  let anonymousId = cookies.anonymous_id;
 
   if (!anonymousId) {
     anonymousId = generateAnonymousId();
@@ -173,44 +188,68 @@ export async function getCurrentUser(request: Request): Promise<{
   user?: User & { email: string; name?: string; avatar_url?: string };
   anonymousId?: string;
   isDemo: boolean;
+  headers?: HeadersInit;
 }> {
   const cookieHeader = request.headers.get("Cookie");
-  const cookies = new URLSearchParams(cookieHeader?.replace(/; /g, "&") || "");
+  const cookies = parseCookies(cookieHeader);
+  const sessionId = cookies.session_id;
 
-  const sessionId = cookies.get("session_id");
+  const responseHeaders: string[] = [];
+  const isDev = process.env.NODE_ENV !== "production";
 
   if (sessionId) {
-    console.log("找到会话ID:", sessionId);
-    const session = await getUserSession(sessionId);
-    if (session) {
-      console.log("找到有效会话:", session.email);
-      const userData = {
-        id: session.user_id,
-        email: session.email,
-        name: session.name,
-        avatar_url: session.avatar_url,
-      };
-      console.log("返回用户数据:", JSON.stringify(userData));
-      return {
-        user: userData as User & {
-          email: string;
-          name?: string;
-          avatar_url?: string;
-        },
-        isDemo: false,
-      };
-    } else {
-      console.log("会话无效或已过期");
+    try {
+      const session = await getUserSession(sessionId);
+      if (session) {
+        const userData = {
+          id: session.user_id,
+          email: session.email,
+          name: session.name,
+          avatar_url: session.avatar_url,
+        };
+
+        if (isDev) {
+          console.log("会话验证成功:", {
+            email: session.email,
+            sessionId: sessionId.substring(0, 8) + "...",
+          });
+        }
+
+        return {
+          user: userData as User & {
+            email: string;
+            name?: string;
+            avatar_url?: string;
+          },
+          isDemo: false,
+        };
+      } else {
+        // 会话无效，清理Cookie
+        responseHeaders.push(clearSessionCookie());
+        if (isDev) {
+          console.log(
+            "会话无效，清理Cookie:",
+            sessionId.substring(0, 8) + "..."
+          );
+        }
+      }
+    } catch (error) {
+      console.error("获取用户会话失败:", error);
+      responseHeaders.push(clearSessionCookie());
     }
-  } else {
-    console.log("未找到会话ID，cookie:", cookieHeader);
   }
 
   // 如果没有用户会话，获取匿名用户ID
   const anonymousId = await getOrCreateAnonymousId(request);
+  responseHeaders.push(createAnonymousCookie(anonymousId));
+
   return {
     anonymousId,
     isDemo: true,
+    headers:
+      responseHeaders.length > 0
+        ? { "Set-Cookie": responseHeaders.join(", ") }
+        : undefined,
   };
 }
 
@@ -222,9 +261,17 @@ export async function logoutUser(sessionId: string): Promise<void> {
 // 设置会话Cookie
 export function createSessionCookie(sessionId: string): string {
   const isProduction = process.env.NODE_ENV === "production";
-  return `session_id=${sessionId}; HttpOnly; ${
-    isProduction ? "Secure; " : ""
-  }SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}; Path=/`;
+
+  if (isProduction) {
+    return `session_id=${sessionId}; HttpOnly; Secure; SameSite=Lax; Max-Age=${
+      30 * 24 * 60 * 60
+    }; Path=/`;
+  } else {
+    // 开发环境使用 Lax 而不是 None，避免 Secure 要求
+    return `session_id=${sessionId}; HttpOnly; SameSite=Lax; Max-Age=${
+      30 * 24 * 60 * 60
+    }; Path=/`;
+  }
 }
 
 // 设置匿名用户Cookie
@@ -238,7 +285,10 @@ export function createAnonymousCookie(anonymousId: string): string {
 // 清除会话Cookie
 export function clearSessionCookie(): string {
   const isProduction = process.env.NODE_ENV === "production";
-  return `session_id=; HttpOnly; ${
-    isProduction ? "Secure; " : ""
-  }SameSite=Lax; Max-Age=0; Path=/`;
+
+  if (isProduction) {
+    return `session_id=; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Path=/`;
+  } else {
+    return `session_id=; HttpOnly; SameSite=Lax; Max-Age=0; Path=/`;
+  }
 }

@@ -16,7 +16,12 @@ import { getCurrentUser, createAnonymousCookie } from "~/lib/auth.server";
 import Header from "~/components/Header";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { user, anonymousId, isDemo } = await getCurrentUser(request);
+  const {
+    user,
+    anonymousId,
+    isDemo,
+    headers: authHeaders,
+  } = await getCurrentUser(request);
   const userId = user?.id || anonymousId;
 
   const url = new URL(request.url);
@@ -71,11 +76,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     })
   );
 
-  const headers: HeadersInit = {};
-  if (anonymousId && !user) {
-    headers["Set-Cookie"] = createAnonymousCookie(anonymousId);
-  }
-
   return json(
     {
       knowledgePoints,
@@ -87,7 +87,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       user,
       isDemo,
     },
-    { headers }
+    { headers: authHeaders }
   );
 };
 

@@ -23,6 +23,22 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
     return false;
   };
 
+  // 获取当前页面标题
+  const getPageTitle = () => {
+    const path = location.pathname;
+    if (path === "/") return "记录";
+    if (path.startsWith("/knowledge")) {
+      if (path.includes("knowledge/")) return "笔记详情";
+      return "我的收藏";
+    }
+    if (path.startsWith("/topics")) return "知识树";
+    if (path.startsWith("/analyze")) return "编辑笔记";
+    if (path.startsWith("/progress")) return "AI分析中";
+    if (path.startsWith("/auth/login")) return "登录";
+    if (path.startsWith("/auth/register")) return "注册";
+    return "松鼠随记";
+  };
+
   const navigationLinks = [
     { to: "/", icon: "📝", label: "记录" },
     { to: "/knowledge", icon: "🌰", label: "我的收藏" },
@@ -46,6 +62,13 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
             </div>
           </div>
         </Link>
+
+        {/* 移动端页面标题 */}
+        <div className="md:hidden flex-1 px-4">
+          <h2 className="text-sm font-medium text-amber-800 truncate">
+            {getPageTitle()}
+          </h2>
+        </div>
 
         {/* 桌面端导航 */}
         <div className="hidden md:flex items-center space-x-4">

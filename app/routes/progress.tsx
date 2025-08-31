@@ -23,7 +23,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     return redirect("/");
   }
 
-  const { user, anonymousId, isDemo } = await getCurrentUser(request);
+  const {
+    user,
+    anonymousId,
+    isDemo,
+    headers: authHeaders,
+  } = await getCurrentUser(request);
   const userId = user?.id || anonymousId;
 
   // 获取现有主题和标签信息
@@ -32,12 +37,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const existingTags = await getAllTags(userId);
 
   // AI 分析内容
-  const analysis = await analyzeLearningNote(content, topics, existingTags);
-
-  const headers: HeadersInit = {};
-  if (anonymousId && !user) {
-    headers["Set-Cookie"] = createAnonymousCookie(anonymousId);
-  }
+  const analysis = await analyzeLearningNote(
+    content,
+    topics
+      .filter((t) => t.id)
+      .map((t) => ({ id: t.id!, name: t.name, description: t.description })),
+    existingTags
+  );
 
   return json(
     {
@@ -48,7 +54,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       user,
       isDemo,
     },
-    { headers }
+    { headers: authHeaders }
   );
 };
 

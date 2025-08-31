@@ -21,11 +21,11 @@ export const meta: MetaFunction = () => {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { user } = await getCurrentUser(request);
+  const { user, headers: authHeaders } = await getCurrentUser(request);
   if (user) {
     return redirect("/");
   }
-  return json({});
+  return json({}, { headers: authHeaders });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -44,12 +44,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   if (user) {
-    console.log("用户登录成功:", user.email);
+    const isDev = process.env.NODE_ENV !== "production";
+
+    if (isDev) {
+      console.log("用户登录成功:", user.email);
+    }
+
     const sessionId = await createSession(user.id!);
-    console.log("创建会话ID:", sessionId);
+
+    if (isDev) {
+      console.log("创建会话ID:", sessionId.substring(0, 8) + "...");
+    }
 
     const cookieHeader = createSessionCookie(sessionId);
-    console.log("设置cookie:", cookieHeader);
 
     return redirect("/", {
       headers: {

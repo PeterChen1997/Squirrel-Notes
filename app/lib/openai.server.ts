@@ -337,6 +337,7 @@ export async function generateTopicOverview(
     content: string;
     keywords: string[];
     created_at?: Date;
+    tags?: Array<{ id: string; name: string } | string>;
   }>
 ): Promise<TopicOverview> {
   if (!openai) {
@@ -386,7 +387,7 @@ ${point.content}
 🔑 **关键词：** ${point.keywords?.join(", ") || "无"}
 🏷️ **标签：** ${
       point.tags
-        ?.map((tag) => (typeof tag === "string" ? tag : tag.name))
+        ?.map((tag: any) => (typeof tag === "string" ? tag : tag.name))
         .join(", ") || "无"
     }
 📅 **记录时间：** ${

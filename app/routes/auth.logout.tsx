@@ -7,10 +7,25 @@ import {
 } from "~/lib/auth.server";
 import { createAnonymousUser } from "~/lib/db.server";
 
+// 复用Cookie解析函数
+function parseCookies(cookieHeader: string | null): Record<string, string> {
+  const cookies: Record<string, string> = {};
+  if (!cookieHeader) return cookies;
+
+  cookieHeader.split(";").forEach((cookie) => {
+    const [name, ...rest] = cookie.split("=");
+    if (name && rest.length > 0) {
+      cookies[name.trim()] = rest.join("=").trim();
+    }
+  });
+
+  return cookies;
+}
+
 export const action = async ({ request }: ActionFunctionArgs) => {
   const cookieHeader = request.headers.get("Cookie");
-  const cookies = new URLSearchParams(cookieHeader?.replace(/; /g, "&") || "");
-  const sessionId = cookies.get("session_id");
+  const cookies = parseCookies(cookieHeader);
+  const sessionId = cookies.session_id;
 
   if (sessionId) {
     await logoutUser(sessionId);
