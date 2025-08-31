@@ -87,12 +87,20 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       return json({ error: "主题名称不能为空" }, { status: 400 });
     }
 
-    await updateLearningTopic(topicId, {
-      name: name.trim(),
-      description: description?.trim() || "",
-    });
+    try {
+      await updateLearningTopic(topicId, {
+        name: name.trim(),
+        description: description?.trim() || "",
+      });
 
-    return redirect(`/knowledge/topic/${topicId}`);
+      // 确保重定向到正确的URL
+      const redirectUrl = `/knowledge/topic/${topicId}`;
+      console.log("重定向到:", redirectUrl);
+      return redirect(redirectUrl);
+    } catch (error) {
+      console.error("更新主题失败:", error);
+      return json({ error: "更新主题失败，请重试" }, { status: 500 });
+    }
   }
 
   return json({ error: "未知操作" }, { status: 400 });
