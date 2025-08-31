@@ -177,37 +177,11 @@ export default function KnowledgeIndex() {
     }
   };
 
-  // 按主题分组知识点
-  const groupedPoints = knowledgePoints.reduce((acc, point) => {
-    const topicName =
-      topics.find((t) => t.id === point.learning_topic_id)?.name || "其他";
-    if (!acc[topicName]) {
-      acc[topicName] = [];
-    }
-    acc[topicName].push(point);
-    return acc;
-  }, {} as Record<string, typeof knowledgePoints>);
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("zh-CN", {
       year: "numeric",
       month: "short",
       day: "numeric",
-    });
-  };
-
-  // 添加状态管理折叠展开的笔记
-  const [expandedPoints, setExpandedPoints] = useState<Set<string>>(new Set());
-
-  const toggleExpand = (pointId: string) => {
-    setExpandedPoints((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(pointId)) {
-        newSet.delete(pointId);
-      } else {
-        newSet.add(pointId);
-      }
-      return newSet;
     });
   };
 
@@ -428,68 +402,73 @@ export default function KnowledgeIndex() {
             </div>
           </div>
 
-          {/* 知识点列表 */}
-          {knowledgePoints.length === 0 ? (
+          {/* 主题列表 */}
+          {topics.length === 0 ? (
             <div className="text-center py-8 sm:py-12">
               <div className="text-4xl sm:text-6xl mb-4">📚</div>
               <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
-                还没有知识点
+                还没有学习主题
               </h3>
               <p className="text-sm sm:text-base text-gray-600 mb-6 px-4">
-                开始记录你的第一个学习内容吧！
+                开始创建你的第一个学习主题吧！
               </p>
-              <Link
-                to="/"
+              <button
+                onClick={() => setShowCreateTopic(true)}
                 className="inline-flex items-center px-6 py-3 bg-blue-500 text-white text-sm sm:text-base font-semibold rounded-xl hover:bg-blue-600 transition-all"
               >
                 <span className="mr-2">+</span>
-                创建第一个笔记
-              </Link>
+                创建第一个主题
+              </button>
             </div>
           ) : (
             <div className="space-y-6 sm:space-y-8">
-              {Object.entries(groupedPoints).map(([topicName, points]) => {
-                // 找到对应的主题详情
-                const topicDetail = topics.find((t) => t.name === topicName);
-                const aiOverview = topicDetail?.aiOverview;
+              {topics.map((topic) => {
+                const aiOverview = topic.aiOverview;
 
                 return (
                   <div
-                    key={topicName}
+                    key={topic.id}
                     className="bg-white rounded-lg sm:rounded-2xl shadow-lg border border-gray-100 overflow-hidden"
                   >
+                    {/* 主题标题栏 */}
                     <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center flex-wrap gap-2">
-                        <span className="mr-1 sm:mr-2 text-base sm:text-lg">
-                          📖
-                        </span>
-                        <span className="flex-1 min-w-0 break-words">
-                          {topicName}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          {topicDetail?.id &&
-                            loadingOverviews.has(topicDetail.id) && (
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center flex-wrap gap-2">
+                          <span className="mr-1 sm:mr-2 text-base sm:text-lg">
+                            📖
+                          </span>
+                          <span className="flex-1 min-w-0 break-words">
+                            {topic.name}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {topic.id && loadingOverviews.has(topic.id) && (
                               <div className="flex items-center px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full whitespace-nowrap">
                                 <div className="w-3 h-3 border border-orange-400 border-t-transparent rounded-full animate-spin mr-1"></div>
                                 AI分析中
                               </div>
                             )}
-                          {topicDetail?.id &&
-                            recentlyUpdated.has(topicDetail.id) && (
+                            {topic.id && recentlyUpdated.has(topic.id) && (
                               <div className="flex items-center px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full whitespace-nowrap">
                                 <span className="mr-1">✨</span>
                                 已更新
                               </div>
                             )}
-                          <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full whitespace-nowrap">
-                            {points.length} 个知识点
-                          </span>
-                        </div>
-                      </h3>
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full whitespace-nowrap">
+                              {topic.knowledgePointsCount} 个知识点
+                            </span>
+                          </div>
+                        </h3>
+                        <Link
+                          to={`/knowledge/topic/${topic.id}`}
+                          className="ml-4 px-3 py-1 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 transition-colors"
+                        >
+                          查看详情
+                        </Link>
+                      </div>
                     </div>
 
                     {/* AI概要区域 */}
-                    <div className="p-4 sm:p-6 border-b border-gray-100">
+                    <div className="p-4 sm:p-6">
                       {aiOverview ? (
                         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-blue-200">
                           <h4 className="text-sm sm:text-md font-semibold text-blue-900 mb-2 sm:mb-3 flex items-center flex-wrap gap-2">
@@ -510,18 +489,16 @@ export default function KnowledgeIndex() {
                                   {Math.round(aiOverview.confidence * 100)}%
                                 </span>
                               </span>
-                              {topicDetail?.id && (
+                              {topic.id && (
                                 <button
                                   onClick={() =>
-                                    handleRegenerateOverview(topicDetail.id!)
+                                    handleRegenerateOverview(topic.id!)
                                   }
-                                  disabled={loadingOverviews.has(
-                                    topicDetail.id!
-                                  )}
+                                  disabled={loadingOverviews.has(topic.id!)}
                                   className="px-2 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors disabled:opacity-50"
                                   title="重新生成AI概览"
                                 >
-                                  {loadingOverviews.has(topicDetail.id!) ? (
+                                  {loadingOverviews.has(topic.id!) ? (
                                     <div className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin"></div>
                                   ) : (
                                     <span className="sm:hidden">🔄</span>
@@ -678,7 +655,7 @@ export default function KnowledgeIndex() {
                             </div>
                           )}
                         </div>
-                      ) : points.length > 0 ? (
+                      ) : topic.knowledgePointsCount > 0 ? (
                         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                           <div className="flex items-center">
                             <span className="mr-2">⏳</span>
@@ -697,168 +674,6 @@ export default function KnowledgeIndex() {
                           </div>
                         </div>
                       )}
-                    </div>
-
-                    <div className="space-y-2 sm:space-y-3">
-                      {points.map((point) => (
-                        <div
-                          key={point.id}
-                          className="bg-gray-50 rounded-lg sm:rounded-xl border border-gray-200 overflow-hidden transition-all hover:shadow-sm"
-                        >
-                          {/* 笔记标题栏 - 点击展开/收起 */}
-                          <button
-                            onClick={() => toggleExpand(point.id!)}
-                            className="w-full px-4 sm:px-6 py-3 sm:py-4 text-left hover:bg-gray-100 transition-colors flex items-center justify-between"
-                          >
-                            <div className="flex items-center flex-1 min-w-0">
-                              <span className="mr-2 sm:mr-3 text-base shrink-0">
-                                {expandedPoints.has(point.id!) ? "📖" : "📄"}
-                              </span>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-medium text-gray-900 mb-1 text-sm sm:text-base break-words">
-                                  {point.title || "无标题"}
-                                </h4>
-                                <div className="flex items-center text-xs text-gray-500 space-x-2">
-                                  <span className="shrink-0">
-                                    <span className="sm:hidden">🕒</span>
-                                    <span className="hidden sm:inline">
-                                      🕒{" "}
-                                      {formatDate(
-                                        point.created_at?.toString() || ""
-                                      )}
-                                    </span>
-                                  </span>
-                                  {point.tags && point.tags.length > 0 && (
-                                    <div className="flex items-center space-x-1 min-w-0">
-                                      <span className="shrink-0">🏷️</span>
-                                      <span className="truncate">
-                                        {point.tags
-                                          .slice(0, 1)
-                                          .map((tag) =>
-                                            typeof tag === "string"
-                                              ? tag
-                                              : tag.name
-                                          )
-                                          .join(", ")}
-                                      </span>
-                                      {point.tags.length > 1 && (
-                                        <span>+{point.tags.length - 1}</span>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="ml-2 text-gray-400 text-xs shrink-0">
-                              <span className="sm:hidden">
-                                {expandedPoints.has(point.id!) ? "▲" : "▼"}
-                              </span>
-                              <span className="hidden sm:inline">
-                                {expandedPoints.has(point.id!)
-                                  ? "收起"
-                                  : "展开"}
-                              </span>
-                            </div>
-                          </button>
-
-                          {/* 笔记内容 - 展开时显示 */}
-                          {expandedPoints.has(point.id!) && (
-                            <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-200">
-                              {/* AI摘要 */}
-                              {point.summary && (
-                                <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200 mt-3">
-                                  <h5 className="text-xs font-medium text-blue-900 mb-2 flex items-center">
-                                    <span className="mr-2">🤖</span>
-                                    <span className="sm:hidden">摘要</span>
-                                    <span className="hidden sm:inline">
-                                      AI 摘要
-                                    </span>
-                                  </h5>
-                                  <p className="text-blue-800 text-xs leading-relaxed">
-                                    {point.summary}
-                                  </p>
-                                </div>
-                              )}
-
-                              {/* 学习内容 */}
-                              <div className="mb-3 mt-3">
-                                <h5 className="text-xs font-medium text-gray-700 mb-2">
-                                  <span className="sm:hidden">📝</span>
-                                  <span className="hidden sm:inline">
-                                    📝 内容
-                                  </span>
-                                </h5>
-                                <div className="text-gray-700 text-xs leading-relaxed whitespace-pre-wrap bg-white rounded-lg p-3 border border-gray-200">
-                                  {point.content}
-                                </div>
-                              </div>
-
-                              {/* 标签和关键词 */}
-                              <div className="space-y-2 text-xs">
-                                {point.tags && point.tags.length > 0 && (
-                                  <div className="flex items-start">
-                                    <span className="mr-2 text-gray-500 shrink-0">
-                                      <span className="sm:hidden">🏷️</span>
-                                      <span className="hidden sm:inline">
-                                        🏷️ 标签:
-                                      </span>
-                                    </span>
-                                    <div className="flex flex-wrap gap-1">
-                                      {point.tags.map((tag, index) => (
-                                        <span
-                                          key={index}
-                                          className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs"
-                                        >
-                                          {typeof tag === "string"
-                                            ? tag
-                                            : tag.name}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {point.keywords &&
-                                  point.keywords.length > 0 && (
-                                    <div className="flex items-start">
-                                      <span className="mr-2 text-gray-500 shrink-0">
-                                        <span className="sm:hidden">🔑</span>
-                                        <span className="hidden sm:inline">
-                                          🔑 关键词:
-                                        </span>
-                                      </span>
-                                      <div className="flex flex-wrap gap-1">
-                                        {point.keywords.map(
-                                          (keyword, index) => (
-                                            <span
-                                              key={index}
-                                              className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs"
-                                            >
-                                              {keyword}
-                                            </span>
-                                          )
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-                              </div>
-
-                              {/* 操作按钮 */}
-                              <div className="mt-3 pt-3 border-t border-gray-200 flex justify-end">
-                                <Link
-                                  to={`/knowledge/${point.id}`}
-                                  className="text-blue-600 hover:text-blue-800 text-xs font-medium transition-colors"
-                                >
-                                  <span className="sm:hidden">详情 →</span>
-                                  <span className="hidden sm:inline">
-                                    查看详情 →
-                                  </span>
-                                </Link>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
                     </div>
                   </div>
                 );

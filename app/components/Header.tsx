@@ -31,7 +31,6 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
       if (path.includes("knowledge/")) return "笔记详情";
       return "我的收藏";
     }
-    if (path.startsWith("/topics")) return "知识树";
     if (path.startsWith("/analyze")) return "编辑笔记";
     if (path.startsWith("/progress")) return "AI分析中";
     if (path.startsWith("/auth/login")) return "登录";
@@ -42,7 +41,6 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
   const navigationLinks = [
     { to: "/", icon: "📝", label: "记录" },
     { to: "/knowledge", icon: "🌰", label: "我的收藏" },
-    { to: "/topics", icon: "🌳", label: "知识树" },
   ];
 
   return (

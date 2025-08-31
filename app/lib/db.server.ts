@@ -455,6 +455,27 @@ export async function getLearningTopic(id: string) {
   return result.rows[0] as LearningTopic;
 }
 
+// 更新学习主题
+export async function updateLearningTopic(
+  id: string,
+  updates: Partial<LearningTopic>
+) {
+  const fields = Object.keys(updates).filter(
+    (key) => key !== "id" && key !== "created_at" && key !== "updated_at"
+  );
+  const values = fields.map((field) => updates[field as keyof LearningTopic]);
+  const setClause = fields
+    .map((field, index) => `${field} = $${index + 2}`)
+    .join(", ");
+
+  const result = await pool.query(
+    `UPDATE learning_topics SET ${setClause} WHERE id = $1 RETURNING *`,
+    [id, ...values]
+  );
+
+  return result.rows[0] as LearningTopic;
+}
+
 // === 知识点相关操作 ===
 
 // 创建知识点
