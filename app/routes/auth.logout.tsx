@@ -23,26 +23,32 @@ function parseCookies(cookieHeader: string | null): Record<string, string> {
 }
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const cookieHeader = request.headers.get("Cookie");
-  const cookies = parseCookies(cookieHeader);
-  const sessionId = cookies.session_id;
+  try {
+    const cookieHeader = request.headers.get("Cookie");
+    const cookies = parseCookies(cookieHeader);
+    const sessionId = cookies.session_id;
 
-  if (sessionId) {
-    await logoutUser(sessionId);
+    if (sessionId) {
+      await logoutUser(sessionId);
+    }
+
+    // 创建新的匿名用户ID
+    const newAnonymousId = generateAnonymousId();
+    await createAnonymousUser(newAnonymousId);
+
+    return redirect("/", {
+      headers: {
+        "Set-Cookie": [
+          clearSessionCookie(),
+          createAnonymousCookie(newAnonymousId),
+        ].join(", "),
+      },
+    });
+  } catch (error) {
+    console.error("注销失败:", error);
+    // 即使出错也要重定向到首页
+    return redirect("/");
   }
-
-  // 创建新的匿名用户ID
-  const newAnonymousId = generateAnonymousId();
-  await createAnonymousUser(newAnonymousId);
-
-  return redirect("/", {
-    headers: {
-      "Set-Cookie": [
-        clearSessionCookie(),
-        createAnonymousCookie(newAnonymousId),
-      ].join(", "),
-    },
-  });
 };
 
 export const loader = () => {

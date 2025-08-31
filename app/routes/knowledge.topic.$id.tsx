@@ -1,7 +1,13 @@
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { useState } from "react";
-import { Link, useLoaderData, Form, useNavigation } from "@remix-run/react";
+import {
+  Link,
+  useLoaderData,
+  Form,
+  useNavigation,
+  replace,
+} from "@remix-run/react";
 import {
   getLearningTopic,
   getAllKnowledgePoints,
@@ -96,7 +102,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       // 确保重定向到正确的URL
       const redirectUrl = `/knowledge/topic/${topicId}`;
       console.log("重定向到:", redirectUrl);
-      return redirect(redirectUrl);
+      // 前端强制刷新当前页面
+      return replace(redirectUrl);
     } catch (error) {
       console.error("更新主题失败:", error);
       return json({ error: "更新主题失败，请重试" }, { status: 500 });

@@ -116,7 +116,7 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
                   <div className="text-xs text-amber-600">{user.email}</div>
                 </div>
               </div>
-              <Form method="post" action="/auth/logout">
+              <Form method="post" action="/auth/logout" reloadDocument>
                 <button
                   type="submit"
                   className="text-amber-600 hover:text-amber-800 text-sm font-medium flex items-center transition-colors px-2 py-1 rounded hover:bg-amber-50"
@@ -241,7 +241,7 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
                     <div className="text-xs text-amber-600">{user.email}</div>
                   </div>
                 </div>
-                <Form method="post" action="/auth/logout">
+                <Form method="post" action="/auth/logout" reloadDocument>
                   <button
                     type="submit"
                     onClick={() => setIsMobileMenuOpen(false)}
