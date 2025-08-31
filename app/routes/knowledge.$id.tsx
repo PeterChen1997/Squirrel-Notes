@@ -233,7 +233,7 @@ export default function KnowledgeDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* 主要内容区域 */}
             <div className="lg:col-span-2">
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden dark:bg-gray-800 dark:border-gray-700">
                 {isEditing ? (
                   /* 编辑模式 */
                   <Form method="post" className="p-6">

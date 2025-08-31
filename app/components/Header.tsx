@@ -1,5 +1,6 @@
 import { Link, useLocation, Form } from "@remix-run/react";
 import { useState } from "react";
+import ThemeToggle from "./ThemeToggle";
 
 interface User {
   id?: string;
@@ -73,7 +74,7 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
   ];
 
   return (
-    <nav className="px-3 sm:px-6 py-3 sm:py-4 border-b border-amber-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+    <nav className="px-3 sm:px-6 py-3 sm:py-4 border-b border-amber-100 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50">
       <div className="flex justify-between items-center max-w-6xl mx-auto">
         {/* 左侧Logo和标题 */}
         <Link to="/" className="flex items-center space-x-2 sm:space-x-3 group">
@@ -81,21 +82,21 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
             🐿️
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-3">
-            <h1 className="text-lg sm:text-xl font-bold text-amber-900">
+            <h1 className="text-lg sm:text-xl font-bold text-amber-900 dark:text-amber-100">
               松鼠随记
             </h1>
-            <div className="hidden sm:block text-sm text-amber-600 font-medium">
+            <div className="hidden sm:block text-sm text-amber-600 dark:text-amber-400 font-medium">
               勤奋收集知识
             </div>
           </div>
         </Link>
 
         {/* 移动端页面标题 */}
-        <div className="md:hidden flex-1 px-4">
-          <h2 className="text-sm font-medium text-amber-800 truncate">
+        {/* <div className="md:hidden flex-1 px-4">
+          <h2 className="text-sm font-medium text-amber-800 dark:text-amber-200 truncate">
             {getPageTitle()}
           </h2>
-        </div>
+        </div> */}
 
         {/* 桌面端导航 */}
         <div className="hidden md:flex items-center space-x-4">
@@ -114,8 +115,8 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
               to={link.to}
               className={`font-medium flex items-center space-x-1 px-3 py-2 rounded-lg transition-all ${
                 isActiveLink(link.to)
-                  ? "bg-amber-100 text-amber-900"
-                  : "text-amber-700 hover:text-amber-900 hover:bg-amber-50"
+                  ? "bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100"
+                  : "text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 hover:bg-amber-50 dark:hover:bg-amber-900/20"
               }`}
             >
               <span>{link.icon}</span>
@@ -125,7 +126,10 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
 
           {/* 用户菜单 */}
           {user ? (
-            <div className="flex items-center space-x-3 ml-4 pl-4 border-l border-amber-200">
+            <div className="flex items-center space-x-2 ml-4 pl-4 border-l border-amber-200">
+              {/* 主题切换 */}
+              <ThemeToggle />
+
               <div className="flex items-center space-x-2">
                 {user.avatar_url ? (
                   <img
@@ -139,16 +143,18 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
                   </div>
                 )}
                 <div className="hidden lg:block">
-                  <div className="text-sm font-medium text-amber-900">
+                  <div className="text-sm font-medium text-amber-900 dark:text-amber-100">
                     {user.name || "用户"}
                   </div>
-                  <div className="text-xs text-amber-600">{user.email}</div>
+                  <div className="text-xs text-amber-600 dark:text-amber-400">
+                    {user.email}
+                  </div>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="text-amber-600 hover:text-amber-800 text-sm font-medium flex items-center transition-colors px-2 py-1 rounded hover:bg-amber-50"
+                className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 text-sm font-medium flex items-center transition-colors px-2 py-1 rounded hover:bg-amber-50 dark:hover:bg-amber-900/20"
               >
                 <span className="mr-1">👋</span>
                 <span className="hidden lg:inline">注销</span>
@@ -156,9 +162,12 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
             </div>
           ) : (
             <div className="flex items-center space-x-2 ml-4 pl-4 border-l border-amber-200">
+              {/* 主题切换 */}
+              <ThemeToggle />
+
               <Link
                 to="/auth/login"
-                className="text-amber-700 hover:text-amber-900 text-sm font-medium transition-colors px-3 py-2 rounded-lg hover:bg-amber-50"
+                className="text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 text-sm font-medium transition-colors px-3 py-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20"
               >
                 登录
               </Link>
@@ -174,12 +183,15 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
 
         {/* 移动端菜单按钮 */}
         <div className="md:hidden flex items-center space-x-2">
+          {/* 主题切换 - 移动端 */}
+          <ThemeToggle />
+
           {/* Demo提示 - 移动端简化 */}
-          {isDemo && (
+          {/* {isDemo && (
             <div className="flex items-center bg-amber-200/50 px-2 py-1 rounded-full text-xs text-amber-700">
               <span>👀</span>
             </div>
-          )}
+          )} */}
 
           {/* 用户头像 - 移动端 */}
           {user && (
@@ -201,7 +213,7 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
           {/* 汉堡菜单按钮 */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 rounded-lg text-amber-700 hover:bg-amber-50 transition-colors"
+            className="p-2 rounded-lg text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-900/20 transition-colors"
             aria-label="打开菜单"
           >
             {isMobileMenuOpen ? (
@@ -239,7 +251,7 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
 
       {/* 移动端下拉菜单 */}
       {isMobileMenuOpen && (
-        <div className="md:hidden mt-3 py-3 border-t border-amber-100 bg-white/95 backdrop-blur-sm">
+        <div className="md:hidden mt-3 py-3 border-t border-amber-100 dark:border-amber-800 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm">
           <div className="space-y-1">
             {navigationLinks.map((link) => (
               <Link
@@ -248,8 +260,8 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`flex items-center space-x-3 px-3 py-3 rounded-lg mx-2 transition-all ${
                   isActiveLink(link.to)
-                    ? "bg-amber-100 text-amber-900"
-                    : "text-amber-700 hover:text-amber-900 hover:bg-amber-50"
+                    ? "bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100"
+                    : "text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 hover:bg-amber-50 dark:hover:bg-amber-900/20"
                 }`}
               >
                 <span className="text-lg">{link.icon}</span>
@@ -259,31 +271,33 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
 
             {/* 用户相关链接 - 移动端 */}
             {user ? (
-              <div className="border-t border-amber-100 mt-3 pt-3 mx-2">
-                <div className="flex items-center space-x-3 px-3 py-2 text-amber-900">
+              <div className="border-t border-amber-100 dark:border-amber-800 mt-3 pt-3 mx-2">
+                <div className="flex items-center space-x-3 px-3 py-2 text-amber-900 dark:text-amber-100">
                   <span className="text-lg">👤</span>
                   <div>
                     <div className="font-medium text-sm">
                       {user.name || "用户"}
                     </div>
-                    <div className="text-xs text-amber-600">{user.email}</div>
+                    <div className="text-xs text-amber-600 dark:text-amber-400">
+                      {user.email}
+                    </div>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="w-full flex items-center space-x-3 px-3 py-3 text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-lg transition-colors"
+                  className="w-full flex items-center space-x-3 px-3 py-3 text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
                 >
                   <span className="text-lg">👋</span>
                   <span className="font-medium">注销</span>
                 </button>
               </div>
             ) : (
-              <div className="border-t border-amber-100 mt-3 pt-3 mx-2 space-y-1">
+              <div className="border-t border-amber-100 dark:border-amber-800 mt-3 pt-3 mx-2 space-y-1">
                 <Link
                   to="/auth/login"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center space-x-3 px-3 py-3 text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-lg transition-colors"
+                  className="flex items-center space-x-3 px-3 py-3 text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
                 >
                   <span className="text-lg">🔑</span>
                   <span className="font-medium">登录</span>
@@ -291,7 +305,7 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
                 <Link
                   to="/auth/register"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center space-x-3 px-3 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors"
+                  className="flex items-center space-x-3 px-3 py-3 bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700 text-white rounded-lg transition-colors"
                 >
                   <span className="text-lg">✨</span>
                   <span className="font-medium">注册</span>

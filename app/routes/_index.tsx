@@ -174,7 +174,7 @@ export default function Index() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden">
       <Header user={user} isDemo={isDemo} />
 
       {/* 背景装饰松鼠元素 */}
@@ -204,11 +204,11 @@ export default function Index() {
 
           <Form method="post" className="space-y-6">
             {/* 输入区域 */}
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-200 overflow-hidden animate-slide-up relative z-10">
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-200 overflow-hidden animate-slide-up relative z-10 dark:bg-gray-800 dark:border-gray-700">
               {/* 输入模式切换 */}
-              <div className="border-b border-amber-100 p-4 bg-gradient-to-r from-amber-50 to-orange-50">
+              <div className=" p-4 ">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-amber-900 flex items-center">
+                  <h3 className="text-lg font-semibold text-amber-900 flex items-center dark:text-gray-100">
                     <span className="mr-2">📝</span>
                     小松鼠收集时间
                   </h3>
@@ -337,8 +337,8 @@ export default function Index() {
             </div>
 
             {/* 示例卡片 */}
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-200 p-6 animate-slide-up relative z-10">
-              <h3 className="text-lg font-semibold text-amber-900 mb-4 flex items-center">
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-200 p-6 animate-slide-up relative z-10 dark:bg-gray-800 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-amber-900 mb-4 flex items-center dark:text-gray-100">
                 <span className="mr-2">🌰</span>
                 松鼠的学习示例 - 点击试试看
               </h3>
@@ -350,10 +350,10 @@ export default function Index() {
                     onClick={() => !isSubmitting && setContent(example)}
                     className={`text-left p-4 bg-amber-50 hover:bg-amber-100 rounded-xl transition-all text-amber-800 hover:text-amber-900 border border-amber-100 hover:border-amber-300 shadow-sm hover:shadow-md ${
                       isSubmitting ? "opacity-60 cursor-not-allowed" : ""
-                    }`}
+                    } dark:bg-gray-800 dark:border-gray-700`}
                     disabled={isSubmitting}
                   >
-                    <span className="text-sm flex items-start">
+                    <span className="text-sm flex items-start dark:text-gray-400">
                       <span className="mr-2 text-amber-500">🐿️</span>
                       {example}
                     </span>
@@ -363,8 +363,8 @@ export default function Index() {
             </div>
 
             {/* AI 智能分析预览 */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 animate-slide-up">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 animate-slide-up">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6 flex items-center">
                 <span className="mr-2">🤖</span>
                 AI 智能分析流程
               </h3>
@@ -402,10 +402,12 @@ export default function Index() {
                       {step.num}
                     </div>
                     <div>
-                      <div className="text-base font-semibold text-gray-900">
+                      <div className="text-base font-semibold text-gray-900 dark:text-gray-100">
                         {step.title}
                       </div>
-                      <div className="text-sm text-gray-600">{step.desc}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        {step.desc}
+                      </div>
                     </div>
                   </div>
                 ))}

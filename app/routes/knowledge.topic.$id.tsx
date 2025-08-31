@@ -21,6 +21,7 @@ import BackLink from "~/components/BackLink";
 import Input from "~/components/Input";
 import Textarea from "~/components/Textarea";
 import PageTitle from "~/components/PageTitle";
+import AIOverview from "~/components/AIOverview";
 import { mockTopics, mockKnowledgePoints } from "~/data/mockData";
 import {
   shouldShowDemoNotice,
@@ -218,7 +219,7 @@ export default function TopicDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <Header user={user} isDemo={isDemo} />
 
       <div className="px-3 sm:px-6 py-4 sm:py-8">
@@ -238,18 +239,18 @@ export default function TopicDetailPage() {
 
           {/* Demo提示 - 只在查看mock数据时显示 */}
           {shouldShowDemoNotice(userState, undefined, topic.id) && (
-            <div className="mb-6 bg-amber-100/80 border border-amber-300 rounded-xl p-4">
+            <div className="mb-6 bg-amber-100/80 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-xl p-4">
               <div className="flex items-center">
                 <span className="text-2xl mr-3">👀</span>
                 <div>
-                  <h3 className="font-semibold text-amber-900">
+                  <h3 className="font-semibold text-amber-900 dark:text-amber-100">
                     正在浏览示例内容
                   </h3>
-                  <p className="text-amber-700 text-sm mt-1">
+                  <p className="text-amber-700 dark:text-amber-300 text-sm mt-1">
                     这些是演示数据，仅供查看。
                     <Link
                       to="/auth/register"
-                      className="underline font-medium ml-1"
+                      className="underline font-medium ml-1 text-amber-800 dark:text-amber-200"
                     >
                       注册账号
                     </Link>
@@ -261,7 +262,7 @@ export default function TopicDetailPage() {
           )}
 
           {/* 主题信息卡片 */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-8">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden mb-8">
             {isEditingTopic ? (
               /* 编辑模式 */
               <Form method="post" className="p-6">
@@ -345,12 +346,12 @@ export default function TopicDetailPage() {
                   {/* 标题和编辑按钮 */}
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div className="flex-1">
-                      <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2 flex items-center">
+                      <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center">
                         <span className="mr-2 sm:mr-3">📖</span>
                         {topic.name}
                       </h1>
                       {topic.description && (
-                        <p className="text-gray-600 text-base sm:text-lg">
+                        <p className="text-gray-600 dark:text-gray-300 text-base sm:text-lg">
                           {topic.description}
                         </p>
                       )}
@@ -396,7 +397,7 @@ export default function TopicDetailPage() {
                   </div>
 
                   {/* 统计信息 */}
-                  <div className="flex flex-col sm:flex-row sm:items-center text-sm text-gray-500 gap-2 sm:gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center text-sm text-gray-500 dark:text-gray-400 gap-2 sm:gap-4">
                     <span className="flex items-center">
                       <span className="mr-1">📊</span>
                       {knowledgePoints.length} 个知识点
@@ -410,126 +411,26 @@ export default function TopicDetailPage() {
 
                 {/* AI概要 - 默认折叠 */}
                 {topic.aiOverview && (
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 mb-6 overflow-hidden">
-                    {/* 可点击的标题栏 */}
-                    <button
-                      onClick={() =>
-                        setIsAiOverviewExpanded(!isAiOverviewExpanded)
-                      }
-                      className="w-full p-4 text-left hover:bg-blue-100/50 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-blue-900 flex items-center">
-                          <span className="mr-2">🤖</span>
-                          AI 学习概览
-                        </h3>
-                        <div className="flex items-center space-x-2">
-                          <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                            置信度{" "}
-                            {Math.round(topic.aiOverview.confidence * 100)}%
-                          </span>
-                          <svg
-                            className={`w-5 h-5 text-blue-600 transition-transform ${
-                              isAiOverviewExpanded ? "rotate-180" : ""
-                            }`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 9l-7 7-7-7"
-                            />
-                          </svg>
-                        </div>
-                      </div>
-                    </button>
-
-                    {/* 展开的内容 */}
-                    {isAiOverviewExpanded && (
-                      <div className="px-4 pb-4 space-y-4">
-                        <p className="text-blue-800 leading-relaxed">
-                          {topic.aiOverview.summary}
-                        </p>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                          {/* 核心洞察 */}
-                          {topic.aiOverview.key_insights &&
-                            topic.aiOverview.key_insights.length > 0 && (
-                              <div>
-                                <h4 className="text-sm font-medium text-blue-900 mb-2 flex items-center">
-                                  💡 核心知识点
-                                </h4>
-                                <ul className="space-y-1">
-                                  {topic.aiOverview.key_insights.map(
-                                    (insight: string, index: number) => (
-                                      <li
-                                        key={index}
-                                        className="flex items-start text-sm"
-                                      >
-                                        <span className="mr-2 text-blue-600 mt-1">
-                                          •
-                                        </span>
-                                        <span className="text-blue-800">
-                                          {insight}
-                                        </span>
-                                      </li>
-                                    )
-                                  )}
-                                </ul>
-                              </div>
-                            )}
-
-                          {/* 实用技巧 */}
-                          {topic.aiOverview.practical_points &&
-                            topic.aiOverview.practical_points.length > 0 && (
-                              <div>
-                                <h4 className="text-sm font-medium text-blue-900 mb-2 flex items-center">
-                                  ⚡ 实用技巧
-                                </h4>
-                                <ul className="space-y-1">
-                                  {topic.aiOverview.practical_points.map(
-                                    (point: string, index: number) => (
-                                      <li
-                                        key={index}
-                                        className="flex items-start text-sm"
-                                      >
-                                        <span className="mr-2 text-green-600 mt-1">
-                                          ▸
-                                        </span>
-                                        <span className="text-green-800">
-                                          {point}
-                                        </span>
-                                      </li>
-                                    )
-                                  )}
-                                </ul>
-                              </div>
-                            )}
-                        </div>
-
-                        {/* 学习进度 */}
-                        {topic.aiOverview.learning_progress && (
-                          <div className="p-3 bg-blue-100 rounded-lg">
-                            <span className="text-blue-800 text-sm">
-                              📊 {topic.aiOverview.learning_progress}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <AIOverview
+                    aiOverview={topic.aiOverview}
+                    topicId={topic.id}
+                    knowledgePointsCount={knowledgePoints.length}
+                    isExpanded={isAiOverviewExpanded}
+                    onToggleExpand={() =>
+                      setIsAiOverviewExpanded(!isAiOverviewExpanded)
+                    }
+                    showRegenerateButton={false}
+                    variant="collapsible"
+                  />
                 )}
               </div>
             )}
           </div>
 
           {/* 知识点列表 */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-            <div className="bg-gray-50 px-4 sm:px-6 py-4 border-b border-gray-100">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden dark:bg-gray-800 dark:border-gray-700">
+            <div className="bg-gray-50 px-4 sm:px-6 py-4 border-b border-gray-100 dark:bg-gray-800 dark:border-gray-700">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center dark:text-gray-100">
                 <span className="mr-2">📚</span>
                 知识点详情
                 <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">
@@ -556,7 +457,7 @@ export default function TopicDetailPage() {
                 </Link>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
                 {knowledgePoints.map((point) => (
                   <div key={point.id} className="p-4 sm:p-6">
                     {/* 知识点标题栏 */}
@@ -565,7 +466,7 @@ export default function TopicDetailPage() {
                         onClick={() => toggleExpand(point.id!)}
                         className="flex-1 text-left"
                       >
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 flex items-center dark:text-gray-100">
                           <span className="mr-2 text-lg sm:text-xl">
                             {expandedPoints.has(point.id!) ? "📖" : "📄"}
                           </span>
@@ -620,12 +521,12 @@ export default function TopicDetailPage() {
                       <div className="mt-4 pl-4 sm:pl-8 border-l-2 border-blue-200">
                         {/* AI摘要 */}
                         {point.summary && (
-                          <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                            <h4 className="text-sm font-medium text-blue-900 mb-2 flex items-center">
+                          <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200 dark:bg-gray-800 dark:border-gray-700">
+                            <h4 className="text-sm font-medium text-blue-900 mb-2 flex items-center dark:text-blue-100">
                               <span className="mr-2">🤖</span>
                               AI 摘要
                             </h4>
-                            <p className="text-blue-800 text-sm leading-relaxed">
+                            <p className="text-blue-800 text-sm leading-relaxed dark:text-blue-100">
                               {point.summary}
                             </p>
                           </div>
@@ -633,11 +534,11 @@ export default function TopicDetailPage() {
 
                         {/* 学习内容 */}
                         <div className="mb-4">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">
+                          <h4 className="text-sm font-medium text-gray-700 mb-2 dark:text-gray-100">
                             📝 内容
                           </h4>
                           <div className="prose max-w-none">
-                            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap bg-gray-50 rounded-lg p-3 text-sm sm:text-base">
+                            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap bg-gray-50 rounded-lg p-3 text-sm sm:text-base dark:text-gray-100 dark:bg-gray-700">
                               {point.content}
                             </p>
                           </div>

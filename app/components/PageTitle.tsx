@@ -18,13 +18,15 @@ export default function PageTitle({
       <div className="flex items-center justify-center mb-3">
         <span className="text-3xl sm:text-4xl mr-3">{icon}</span>
         {title && (
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100">
             {title}
           </h1>
         )}
       </div>
       {subtitle && (
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">{subtitle}</p>
+        <p className="text-lg text-gray-600 max-w-2xl mx-auto dark:text-gray-100">
+          {subtitle}
+        </p>
       )}
     </div>
   );

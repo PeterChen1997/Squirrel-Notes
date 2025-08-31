@@ -16,6 +16,7 @@ import { getCurrentUser, createAnonymousCookie } from "~/lib/auth.server";
 import Header from "~/components/Header";
 import PageTitle from "~/components/PageTitle";
 import Label from "~/components/Label";
+import AIOverview from "~/components/AIOverview";
 import { mockTopics, mockKnowledgePoints, mockTags } from "~/data/mockData";
 import {
   isNoContentAnonymousUser,
@@ -253,7 +254,7 @@ export default function KnowledgeIndex() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <Header user={user} isDemo={isDemo} />
 
       <div className="px-3 sm:px-6 py-4 sm:py-8">
@@ -291,7 +292,7 @@ export default function KnowledgeIndex() {
           )}
 
           {/* 搜索和筛选区域 */}
-          <div className="mb-8 bg-white rounded-2xl shadow-lg border border-amber-100 p-6">
+          <div className="mb-8 bg-white rounded-2xl shadow-lg border border-amber-100 p-6 dark:bg-gray-800 dark:border-gray-700">
             {/* 搜索框 */}
             <div className="mb-6">
               <div className="relative">
@@ -398,9 +399,9 @@ export default function KnowledgeIndex() {
 
           {/* 统计信息 */}
           <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
               <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-lg">
+                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
                   <svg
                     className="w-6 h-6 text-blue-600"
                     fill="none"
@@ -416,17 +417,19 @@ export default function KnowledgeIndex() {
                   </svg>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm text-gray-600">总知识点</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    总知识点
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {knowledgePoints.length}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
               <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-lg">
+                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
                   <svg
                     className="w-6 h-6 text-green-600"
                     fill="none"
@@ -442,17 +445,19 @@ export default function KnowledgeIndex() {
                   </svg>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm text-gray-600">学习主题</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    学习主题
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {topics.length}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
               <div className="flex items-center">
-                <div className="p-3 bg-purple-100 rounded-lg">
+                <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
                   <svg
                     className="w-6 h-6 text-purple-600"
                     fill="none"
@@ -468,8 +473,10 @@ export default function KnowledgeIndex() {
                   </svg>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm text-gray-600">标签数量</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    标签数量
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {allTags.length}
                   </p>
                 </div>
@@ -481,10 +488,10 @@ export default function KnowledgeIndex() {
           {topics.length === 0 ? (
             <div className="text-center py-8 sm:py-12">
               <div className="text-4xl sm:text-6xl mb-4">📚</div>
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 还没有学习主题
               </h3>
-              <p className="text-sm sm:text-base text-gray-600 mb-6 px-4">
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6 px-4">
                 开始创建你的第一个学习主题吧！
               </p>
               <button
@@ -503,12 +510,12 @@ export default function KnowledgeIndex() {
                 return (
                   <div
                     key={topic.id}
-                    className="bg-white rounded-lg sm:rounded-2xl shadow-lg border border-gray-100 overflow-hidden"
+                    className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden"
                   >
                     {/* 主题标题栏 */}
-                    <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
+                    <div className="bg-gray-50 dark:bg-gray-700 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 dark:border-gray-600">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center flex-wrap gap-2">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center flex-wrap gap-2">
                           <span className="mr-1 sm:mr-2 text-base sm:text-lg">
                             📖
                           </span>
@@ -544,211 +551,15 @@ export default function KnowledgeIndex() {
 
                     {/* AI概要区域 */}
                     <div className="p-4 sm:p-6">
-                      {aiOverview ? (
-                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-blue-200">
-                          <h4 className="text-sm sm:text-md font-semibold text-blue-900 mb-2 sm:mb-3 flex items-center flex-wrap gap-2">
-                            <span className="mr-1 sm:mr-2">🤖</span>
-                            <span className="flex-1">
-                              <span className="sm:hidden">AI概览</span>
-                              <span className="hidden sm:inline">
-                                AI 学习概览
-                              </span>
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full whitespace-nowrap">
-                                <span className="sm:hidden">
-                                  {Math.round(aiOverview.confidence * 100)}%
-                                </span>
-                                <span className="hidden sm:inline">
-                                  置信度{" "}
-                                  {Math.round(aiOverview.confidence * 100)}%
-                                </span>
-                              </span>
-                              {topic.id && (
-                                <button
-                                  onClick={() =>
-                                    handleRegenerateOverview(topic.id!)
-                                  }
-                                  disabled={loadingOverviews.has(topic.id!)}
-                                  className="px-2 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors disabled:opacity-50"
-                                  title="重新生成AI概览"
-                                >
-                                  {loadingOverviews.has(topic.id!) ? (
-                                    <div className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-                                  ) : (
-                                    <span className="sm:hidden">🔄</span>
-                                  )}
-                                  <span className="hidden sm:inline">
-                                    重新生成
-                                  </span>
-                                </button>
-                              )}
-                            </div>
-                          </h4>
-
-                          {/* 主题摘要 */}
-                          <div className="mb-3 sm:mb-4">
-                            <p className="text-blue-800 text-xs sm:text-sm leading-relaxed mb-2 sm:mb-3">
-                              {aiOverview.summary}
-                            </p>
-                          </div>
-
-                          <div className="space-y-3">
-                            {/* 核心洞察 */}
-                            {aiOverview.key_insights &&
-                              aiOverview.key_insights.length > 0 && (
-                                <div>
-                                  <h5 className="text-xs sm:text-sm font-medium text-blue-900 mb-1 sm:mb-2">
-                                    <span className="sm:hidden">💡</span>
-                                    <span className="hidden sm:inline">
-                                      💡 核心知识点
-                                    </span>
-                                  </h5>
-                                  <ul className="space-y-1">
-                                    {aiOverview.key_insights
-                                      .slice(0, 4)
-                                      .map((insight: string, index: number) => (
-                                        <li
-                                          key={index}
-                                          className="flex items-start"
-                                        >
-                                          <span className="mr-1 text-blue-600 text-xs shrink-0">
-                                            •
-                                          </span>
-                                          <span className="text-blue-800 text-xs leading-tight">
-                                            {insight}
-                                          </span>
-                                        </li>
-                                      ))}
-                                  </ul>
-                                </div>
-                              )}
-
-                            {/* 实用要点 */}
-                            {aiOverview.practical_points &&
-                              aiOverview.practical_points.length > 0 && (
-                                <div>
-                                  <h5 className="text-xs sm:text-sm font-medium text-blue-900 mb-1 sm:mb-2">
-                                    <span className="sm:hidden">⚡</span>
-                                    <span className="hidden sm:inline">
-                                      ⚡ 实用技巧
-                                    </span>
-                                  </h5>
-                                  <ul className="space-y-1">
-                                    {aiOverview.practical_points
-                                      .slice(0, 3)
-                                      .map((point: string, index: number) => (
-                                        <li
-                                          key={index}
-                                          className="flex items-start"
-                                        >
-                                          <span className="mr-1 text-green-600 text-xs shrink-0">
-                                            ▸
-                                          </span>
-                                          <span className="text-green-800 text-xs leading-tight">
-                                            {point}
-                                          </span>
-                                        </li>
-                                      ))}
-                                  </ul>
-                                </div>
-                              )}
-
-                            {/* 经验总结 */}
-                            {aiOverview.experience_summary &&
-                              aiOverview.experience_summary.length > 0 && (
-                                <div>
-                                  <h5 className="text-xs sm:text-sm font-medium text-blue-900 mb-1 sm:mb-2">
-                                    <span className="sm:hidden">💭</span>
-                                    <span className="hidden sm:inline">
-                                      💭 经验总结
-                                    </span>
-                                  </h5>
-                                  <ul className="space-y-1">
-                                    {aiOverview.experience_summary
-                                      .slice(0, 2)
-                                      .map((summary: string, index: number) => (
-                                        <li
-                                          key={index}
-                                          className="flex items-start"
-                                        >
-                                          <span className="mr-1 text-purple-600 text-xs shrink-0">
-                                            ◈
-                                          </span>
-                                          <span className="text-purple-800 text-xs leading-tight">
-                                            {summary}
-                                          </span>
-                                        </li>
-                                      ))}
-                                  </ul>
-                                </div>
-                              )}
-
-                            {/* 下一步建议 */}
-                            {aiOverview.next_steps &&
-                              aiOverview.next_steps.length > 0 && (
-                                <div>
-                                  <h5 className="text-xs sm:text-sm font-medium text-blue-900 mb-1 sm:mb-2">
-                                    <span className="sm:hidden">🎯</span>
-                                    <span className="hidden sm:inline">
-                                      🎯 进阶方向
-                                    </span>
-                                  </h5>
-                                  <ul className="space-y-1">
-                                    {aiOverview.next_steps
-                                      .slice(0, 3)
-                                      .map((step: string, index: number) => (
-                                        <li
-                                          key={index}
-                                          className="flex items-start"
-                                        >
-                                          <span className="mr-1 text-orange-600 text-xs shrink-0">
-                                            →
-                                          </span>
-                                          <span className="text-orange-800 text-xs leading-tight">
-                                            {step}
-                                          </span>
-                                        </li>
-                                      ))}
-                                  </ul>
-                                </div>
-                              )}
-                          </div>
-
-                          {/* 学习进度 */}
-                          {aiOverview.learning_progress && (
-                            <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-blue-100 rounded-lg">
-                              <span className="text-blue-800 text-xs leading-tight">
-                                <span className="sm:hidden">📊</span>
-                                <span className="hidden sm:inline">
-                                  📊 {aiOverview.learning_progress}
-                                </span>
-                                <span className="sm:hidden">
-                                  {aiOverview.learning_progress}
-                                </span>
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      ) : topic.knowledgePointsCount > 0 ? (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                          <div className="flex items-center">
-                            <span className="mr-2">⏳</span>
-                            <span className="text-yellow-800 text-xs sm:text-sm">
-                              AI 正在生成学习概览...
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                          <div className="flex items-center">
-                            <span className="mr-2">📝</span>
-                            <span className="text-gray-600 text-xs sm:text-sm leading-tight">
-                              还没有学习笔记，添加第一条笔记后 AI 将自动生成概览
-                            </span>
-                          </div>
-                        </div>
-                      )}
+                      <AIOverview
+                        aiOverview={aiOverview}
+                        topicId={topic.id}
+                        knowledgePointsCount={topic.knowledgePointsCount}
+                        onRegenerateOverview={handleRegenerateOverview}
+                        loadingOverviews={loadingOverviews}
+                        showRegenerateButton={true}
+                        variant="card"
+                      />
                     </div>
                   </div>
                 );
