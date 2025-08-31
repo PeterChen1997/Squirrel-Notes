@@ -40,7 +40,7 @@ export const links: LinksFunction = () => [
     href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
   },
   { rel: "manifest", href: "/manifest.json" },
-  { rel: "apple-touch-icon", href: "/logo-light.png" },
+  { rel: "apple-touch-icon", href: "/icon-192x192.png" },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -68,23 +68,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              // Service Worker 已禁用
+              console.log('Service Worker 注册已禁用');
+              
+              // 如果需要重新启用，请取消注释以下代码：
+              /*
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
-                  // 开发环境提示
-                  const isDev = window.location.hostname === 'localhost' || 
-                               window.location.hostname === '127.0.0.1' ||
-                               window.location.port === '5173';
-                  
                   navigator.serviceWorker.register('/sw.js')
                     .then(registration => {
                       console.log('SW registered');
-                      if (isDev) {
-                        console.log('🔥 开发环境：Service Worker 使用 Network First 策略，应该能看到最新内容');
-                      }
                     })
                     .catch(error => console.log('SW registration failed', error));
                 });
               }
+              */
             `,
           }}
         />

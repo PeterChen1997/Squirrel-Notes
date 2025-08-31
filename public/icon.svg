@@ -1,0 +1,58 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆形 -->
+  <circle cx="256" cy="256" r="256" fill="#F59E0B"/>
+  
+  <!-- 松鼠身体 -->
+  <ellipse cx="256" cy="320" rx="120" ry="140" fill="#8B4513"/>
+  
+  <!-- 松鼠头部 -->
+  <circle cx="256" cy="200" r="80" fill="#8B4513"/>
+  
+  <!-- 耳朵 -->
+  <ellipse cx="220" cy="140" rx="25" ry="35" fill="#8B4513"/>
+  <ellipse cx="292" cy="140" rx="25" ry="35" fill="#8B4513"/>
+  
+  <!-- 耳朵内部 -->
+  <ellipse cx="220" cy="140" rx="15" ry="25" fill="#D2691E"/>
+  <ellipse cx="292" cy="140" rx="15" ry="25" fill="#D2691E"/>
+  
+  <!-- 眼睛 -->
+  <circle cx="240" cy="190" r="12" fill="#000"/>
+  <circle cx="272" cy="190" r="12" fill="#000"/>
+  <circle cx="242" cy="188" r="4" fill="#FFF"/>
+  <circle cx="274" cy="188" r="4" fill="#FFF"/>
+  
+  <!-- 鼻子 -->
+  <ellipse cx="256" cy="210" rx="6" ry="4" fill="#000"/>
+  
+  <!-- 嘴巴 -->
+  <path d="M 246 220 Q 256 230 266 220" stroke="#000" stroke-width="2" fill="none"/>
+  
+  <!-- 胡须 -->
+  <line x1="220" y1="210" x2="200" y2="205" stroke="#000" stroke-width="2"/>
+  <line x1="220" y1="215" x2="200" y2="215" stroke="#000" stroke-width="2"/>
+  <line x1="220" y1="220" x2="200" y2="225" stroke="#000" stroke-width="2"/>
+  
+  <line x1="292" y1="210" x2="312" y2="205" stroke="#000" stroke-width="2"/>
+  <line x1="292" y1="215" x2="312" y2="215" stroke="#000" stroke-width="2"/>
+  <line x1="292" y1="220" x2="312" y2="225" stroke="#000" stroke-width="2"/>
+  
+  <!-- 肚子 -->
+  <ellipse cx="256" cy="340" rx="80" ry="100" fill="#D2691E"/>
+  
+  <!-- 尾巴 -->
+  <path d="M 376 280 Q 420 240 440 300 Q 420 360 376 320 Z" fill="#8B4513"/>
+  <path d="M 380 285 Q 415 245 430 295 Q 415 345 380 315 Z" fill="#D2691E"/>
+  
+  <!-- 爪子 -->
+  <ellipse cx="200" cy="380" rx="15" ry="20" fill="#8B4513"/>
+  <ellipse cx="312" cy="380" rx="15" ry="20" fill="#8B4513"/>
+  
+  <!-- 坚果 -->
+  <ellipse cx="320" cy="360" rx="12" ry="8" fill="#8B4513"/>
+  <ellipse cx="320" cy="360" rx="8" ry="5" fill="#D2691E"/>
+  
+  <!-- 装饰性叶子 -->
+  <path d="M 180 280 Q 160 260 170 240 Q 190 250 180 280" fill="#228B22"/>
+  <path d="M 332 280 Q 352 260 342 240 Q 322 250 332 280" fill="#228B22"/>
+</svg>
