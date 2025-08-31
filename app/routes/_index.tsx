@@ -266,27 +266,58 @@ export default function Index() {
                 <div className="space-y-4">
                   {/* 输入框 */}
                   <div className="relative">
-                    <Textarea
-                      name="content"
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      placeholder="🌰 告诉小松鼠你今天学到了什么新知识吧～ 比如：今天网球课学到的发球技巧..."
-                      className={`h-40 ${
-                        isSubmitting ? "opacity-60 pointer-events-none" : ""
-                      }`}
-                      rows={6}
-                      required
-                      disabled={isSubmitting}
-                      variant="amber"
-                    />
+                    {isListening ? (
+                      /* 录音时的覆盖层 */
+                      <div className="h-40 bg-gradient-to-br from-red-50 to-pink-50 border-2 border-red-200 rounded-xl flex flex-col items-center justify-center relative overflow-hidden animate-pulse">
+                        {/* 背景动画效果 */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-red-100/20 to-pink-100/20 animate-pulse"></div>
 
-                    {/* 字符计数器 - 放在右下角 */}
-                    <div className="absolute bottom-2 right-3 text-sm font-medium text-amber-700 flex items-center bg-white/95 backdrop-blur-sm px-3 py-2 rounded-full shadow-sm border border-amber-200 mb-3">
-                      <span className="mr-1">🐿️</span>
-                      <span className="text-amber-800">{content.length}</span>
-                      <span className="text-amber-500 mx-1">/</span>
-                      <span className="text-amber-600">1000</span>
-                    </div>
+                        {/* 录音图标 */}
+                        <div className="relative z-10 mb-4">
+                          <div className="w-16 h-16 bg-gradient-to-r from-red-400 to-pink-500 rounded-full flex items-center justify-center shadow-lg">
+                            <span className="text-2xl">🎤</span>
+                          </div>
+                          {/* 声波动画 */}
+                          <div className="absolute inset-0 rounded-full border-4 border-red-300/50 animate-ping"></div>
+                          <div className="absolute inset-0 rounded-full border-2 border-red-400/30 animate-ping animation-delay-75"></div>
+                        </div>
+
+                        {/* 录音状态文字 */}
+                        <div className="text-center z-10">
+                          <div className="text-lg font-semibold text-red-700 mb-2">
+                            正在收听中...
+                          </div>
+                          <div className="text-sm text-red-600 max-w-xs text-center">
+                            请说话，点击红色按钮停止录音
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* 正常输入框 */
+                      <Textarea
+                        name="content"
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        placeholder="🌰 告诉小松鼠你今天学到了什么新知识吧～ 比如：今天网球课学到的发球技巧..."
+                        className={`h-40 ${
+                          isSubmitting ? "opacity-60 pointer-events-none" : ""
+                        }`}
+                        rows={6}
+                        required
+                        disabled={isSubmitting}
+                        variant="amber"
+                      />
+                    )}
+
+                    {/* 字符计数器 - 只在非录音时显示 */}
+                    {!isListening && (
+                      <div className="absolute bottom-2 right-3 text-sm font-medium text-amber-700 flex items-center bg-white/95 backdrop-blur-sm px-3 py-2 rounded-full shadow-sm border border-amber-200 mb-3">
+                        <span className="mr-1">🐿️</span>
+                        <span className="text-amber-800">{content.length}</span>
+                        <span className="text-amber-500 mx-1">/</span>
+                        <span className="text-amber-600">1000</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* 底部操作区域 */}
@@ -300,9 +331,9 @@ export default function Index() {
                     {/* 保存按钮 */}
                     <button
                       type="submit"
-                      disabled={!content.trim() || isSubmitting}
+                      disabled={!content.trim() || isSubmitting || isListening}
                       className={`px-6 py-3 font-medium rounded-xl transition-all shadow-md hover:shadow-lg transform hover:scale-[1.02] disabled:scale-100 disabled:cursor-not-allowed ${
-                        isSubmitting
+                        isSubmitting || isListening
                           ? "bg-gradient-to-r from-gray-400 to-gray-500 text-white cursor-not-allowed"
                           : "bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600"
                       } ${
@@ -347,11 +378,15 @@ export default function Index() {
                   <button
                     key={index}
                     type="button"
-                    onClick={() => !isSubmitting && setContent(example)}
+                    onClick={() =>
+                      !isSubmitting && !isListening && setContent(example)
+                    }
                     className={`text-left p-4 bg-amber-50 hover:bg-amber-100 rounded-xl transition-all text-amber-800 hover:text-amber-900 border border-amber-100 hover:border-amber-300 shadow-sm hover:shadow-md ${
-                      isSubmitting ? "opacity-60 cursor-not-allowed" : ""
+                      isSubmitting || isListening
+                        ? "opacity-60 cursor-not-allowed"
+                        : ""
                     } dark:bg-gray-800 dark:border-gray-700`}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isListening}
                   >
                     <span className="text-sm flex items-start dark:text-gray-400">
                       <span className="mr-2 text-amber-500">🐿️</span>
@@ -458,6 +493,15 @@ export default function Index() {
         .animate-slide-up {
           animation: slide-up 0.6s ease-out forwards;
           opacity: 0;
+        }
+        .animation-delay-75 {
+          animation-delay: 0.75s;
+        }
+        .animation-delay-100 {
+          animation-delay: 0.1s;
+        }
+        .animation-delay-200 {
+          animation-delay: 0.2s;
         }
       `,
         }}
