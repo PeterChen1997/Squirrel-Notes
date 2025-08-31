@@ -50,8 +50,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <script
           defer
           src="https://a.hweb.peterchen97.cn/script.js"
-          data-website-id="f6af9655-6fa7-486a-ab80-8689989fe76e"
+          data-website-id="a85f5d30-a2f8-4430-b850-c2568c13d7e5"
         ></script>
+
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#f59e0b" />
