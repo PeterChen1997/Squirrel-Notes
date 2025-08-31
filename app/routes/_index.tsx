@@ -99,6 +99,8 @@ export default function Index() {
   const [content, setContent] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
   const navigation = useNavigation();
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -115,13 +117,38 @@ export default function Index() {
     "数学：二次函数的顶点公式是 (-b/2a, 4ac-b²/4a)",
   ];
 
+  // 检测是否为微信浏览器
+  const isWeChatBrowser = () => {
+    const ua = navigator.userAgent.toLowerCase();
+    return ua.includes("micromessenger");
+  };
+
+  // 显示Toast提示
+  const showToastMessage = (message: string) => {
+    setToastMessage(message);
+    setShowToast(true);
+    setTimeout(() => {
+      setShowToast(false);
+    }, 3000);
+  };
+
   // 开始语音识别
   const startSpeechRecognition = () => {
+    // 检测微信浏览器
+    if (isWeChatBrowser()) {
+      showToastMessage(
+        "微信浏览器不支持语音识别，请使用 Chrome、Safari 等浏览器访问"
+      );
+      return;
+    }
+
     try {
       const SpeechRecognition =
         window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
-        alert("您的浏览器不支持语音识别功能");
+        showToastMessage(
+          "您的浏览器不支持语音识别功能，请使用 Chrome、Safari 等现代浏览器"
+        );
         return;
       }
 
@@ -161,7 +188,9 @@ export default function Index() {
       setIsListening(true);
     } catch (error) {
       console.error("语音识别启动失败:", error);
-      alert("无法启动语音识别，请检查麦克风权限");
+      showToastMessage(
+        "无法启动语音识别，请检查麦克风权限或使用 Chrome、Safari 等浏览器"
+      );
     }
   };
 
@@ -503,9 +532,28 @@ export default function Index() {
         .animation-delay-200 {
           animation-delay: 0.2s;
         }
+        @keyframes slide-down {
+          from { opacity: 0; transform: translateY(-20px) translateX(-50%); }
+          to { opacity: 1; transform: translateY(0) translateX(-50%); }
+        }
+        .animate-slide-down {
+          animation: slide-down 0.3s ease-out forwards;
+        }
       `,
         }}
       />
+
+      {/* Toast 提示组件 */}
+      {showToast && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down">
+          <div className="bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg max-w-sm mx-4 text-center">
+            <div className="flex items-center justify-center">
+              <span className="mr-2">⚠️</span>
+              <span className="text-sm font-medium">{toastMessage}</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
