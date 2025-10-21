@@ -3,7 +3,8 @@ import type {
   LoaderFunctionArgs,
   ActionFunctionArgs,
 } from "@remix-run/node";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import toast from "react-hot-toast";
 
 // 添加Web Speech API类型定义
 declare global {
@@ -12,19 +13,19 @@ declare global {
     webkitSpeechRecognition: any;
   }
 }
-import { Form, useNavigation, useLoaderData, Link } from "@remix-run/react";
-import { json, redirect } from "@remix-run/node";
+import { useFetcher, useLoaderData, Link } from "@remix-run/react";
+import { json } from "@remix-run/node";
 import {
   getAllLearningTopics,
   initDatabase,
   createKnowledgePoint,
-  getAllTags,
+  createLearningTopic,
 } from "~/lib/db.server";
-import { getCurrentUser, createAnonymousCookie } from "~/lib/auth.server";
-import { analyzeLearningNote } from "~/lib/openai.server";
+import { getCurrentUser } from "~/lib/auth.server";
 import Header from "~/components/Header";
 import Textarea from "~/components/Textarea";
 import PageTitle from "~/components/PageTitle";
+import { ProcessingToast } from "~/components/ProcessingToast";
 
 export const meta: MetaFunction = () => {
   return [
@@ -66,12 +67,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   try {
-    // 先保存到数据库（不进行AI分析）
+    // 先保存到数据库（不进行AI分析，也不关联topic）
     const savedKnowledge = await createKnowledgePoint({
       title: content.substring(0, 50) + "...", // 临时标题
       user_id: userId,
       content: content.trim(),
-      learning_topic_id: undefined,
+      learning_topic_id: undefined, // AI分析前不关联topic
       summary: "", // 暂时为空
       tag_ids: [],
       keywords: [],
@@ -81,34 +82,156 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       processing_status: "processing", // 标记为处理中
     });
 
-    // 跳转到progress页面显示分析进度
-    const params = new URLSearchParams();
-    params.set("content", content);
-    params.set("knowledgeId", savedKnowledge.id!);
+    // Start background AI analysis (non-blocking)
+    setTimeout(async () => {
+      try {
+        const { analyzeLearningNote } = await import("~/lib/openai.server");
+        const { getAllTags, updateKnowledgePoint } = await import("~/lib/db.server");
 
-    return redirect(`/progress?${params.toString()}`);
+        const existingTags = await getAllTags(userId);
+        const currentTopics = await getAllLearningTopics(userId);
+
+        const analysis = await analyzeLearningNote(
+          content.trim(),
+          currentTopics.filter((t) => t.id).map((t) => ({ id: t.id!, name: t.name, description: t.description })),
+          existingTags
+        );
+
+        // 处理AI建议的topic - 只有在AI分析完成后才关联topic
+        let finalTopicId = undefined;
+        if (analysis.recommended_topic) {
+          // 查找现有topic
+          const suggestedTopic = currentTopics.find((t) => t.name === analysis.recommended_topic.name);
+          if (suggestedTopic) {
+            finalTopicId = suggestedTopic.id;
+          } else if (!analysis.recommended_topic.is_new && analysis.recommended_topic.existing_topic_id) {
+            finalTopicId = analysis.recommended_topic.existing_topic_id;
+          } else {
+            // 创建新topic
+            const newTopic = await createLearningTopic({
+              name: analysis.recommended_topic.name,
+              description: analysis.recommended_topic.description || `${analysis.recommended_topic.name}相关的学习内容`,
+              user_id: userId,
+            });
+            finalTopicId = newTopic.id!;
+          }
+        }
+
+        // 如果AI没有推荐topic，则创建或使用"未分类"topic
+        if (!finalTopicId) {
+          let uncategorizedTopic = currentTopics.find((t) => t.name === "未分类");
+          if (!uncategorizedTopic) {
+            uncategorizedTopic = await createLearningTopic({
+              name: "未分类",
+              description: "默认学习主题，用于存放未分类的知识点",
+              user_id: userId,
+            });
+          }
+          finalTopicId = uncategorizedTopic.id!;
+        }
+
+        // Update the knowledge point with analysis results and topic association
+        await updateKnowledgePoint(savedKnowledge.id!, {
+          title: analysis.title || "未命名知识点",
+          summary: analysis.summary || "",
+          confidence: analysis.confidence || 0.8,
+          learning_topic_id: finalTopicId,
+          processing_status: "completed",
+        });
+      } catch (error) {
+        console.error("Background AI analysis failed:", error);
+        // Update with error status
+        const { updateKnowledgePoint } = await import("~/lib/db.server");
+        await updateKnowledgePoint(savedKnowledge.id!, {
+          processing_status: "failed",
+        });
+      }
+    }, 1000);
+
+    // Return success response with knowledge data for toast notification
+    return json({
+      success: true,
+      knowledgeId: savedKnowledge.id,
+      content: content.trim(),
+      message: "知识点已保存，小松鼠正在分析中..."
+    });
   } catch (error) {
     console.error("保存笔记失败:", error);
     return json({ error: "保存失败，请重试" }, { status: 500 });
   }
 };
 
+// Define types for fetcher data
+interface FetcherSuccessData {
+  success: true;
+  knowledgeId: string;
+  content: string;
+  message: string;
+}
+
+interface FetcherErrorData {
+  error: string;
+}
+
+type FetcherData = FetcherSuccessData | FetcherErrorData;
+
 export default function Index() {
   const { topics, user, isDemo } = useLoaderData<typeof loader>();
+  const fetcher = useFetcher<FetcherData>();
 
   const [content, setContent] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
-  const navigation = useNavigation();
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recognitionRef = useRef<any>(null);
 
   // 检查是否正在提交或加载
-  const isSubmitting =
-    navigation.state === "submitting" || navigation.state === "loading";
+  const isSubmitting = fetcher.state === "submitting" || fetcher.state === "loading";
+
+  // Handle fetcher response
+  useEffect(() => {
+    const data = fetcher.data;
+    if (data && 'success' in data && data.success) {
+      // Show processing toast notification
+      toast.custom(
+        (t) => (
+          <ProcessingToast
+            knowledgeId={data.knowledgeId}
+            content={data.content}
+            t={t}
+          />
+        ),
+        {
+          id: `processing-${data.knowledgeId}`,
+          duration: 6000, // 6 seconds total (5s countdown + 1s completion)
+        }
+      );
+
+      // Clear form content
+      setContent("");
+
+      // Show success message
+      toast.success("✅ 知识点已保存，小松鼠正在分析中...");
+    }
+
+    if (data && 'error' in data) {
+      toast.error(`❌ ${data.error}`);
+    }
+  }, [fetcher.data]);
+
+  // Handle form submission
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!content.trim() || isSubmitting || isListening) return;
+
+    const formData = new FormData();
+    formData.append("content", content.trim());
+
+    fetcher.submit(formData, { method: "post" });
+  };
 
   const examples = [
     "今天网球课学习了正手击球要点：击球点要在身体前方，挥拍时要转动腰部",
@@ -231,7 +354,7 @@ export default function Index() {
             className="mb-12"
           />
 
-          <Form method="post" className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* 输入区域 */}
             <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-200 overflow-hidden animate-slide-up relative z-10 dark:bg-gray-800 dark:border-gray-700">
               {/* 输入模式切换 */}
@@ -391,9 +514,7 @@ export default function Index() {
                   </div>
                 </div>
 
-                {/* 隐藏字段 */}
-                <input type="hidden" name="intent" value="analyze" />
-              </div>
+                </div>
             </div>
 
             {/* 示例卡片 */}
@@ -477,7 +598,7 @@ export default function Index() {
                 ))}
               </div>
             </div>
-          </Form>
+          </form>
 
           {/* 最近记录的知识点预览 */}
           <div className="mt-12 text-center">

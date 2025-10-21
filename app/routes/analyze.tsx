@@ -2,6 +2,10 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { redirect, json } from "@remix-run/node";
 import { useState } from "react";
 import { Form, useLoaderData, useNavigation, Link } from "@remix-run/react";
+
+export const meta = () => {
+  return [{ title: "智能分析笔记 - 松鼠随记" }];
+};
 import {
   getKnowledgePoint,
   updateKnowledgePoint,
@@ -55,13 +59,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const existingTags = await getAllTags(userId);
 
   // 重新分析内容，提供编辑建议
-  const analysis = await analyzeLearningNote(
-    knowledgePoint.content,
-    topics
-      .filter((t) => t.id)
-      .map((t) => ({ id: t.id!, name: t.name, description: t.description })),
-    existingTags
-  );
+  let analysis = null;
+  try {
+    analysis = await analyzeLearningNote(
+      knowledgePoint.content,
+      topics
+        .filter((t) => t.id)
+        .map((t) => ({ id: t.id!, name: t.name, description: t.description })),
+      existingTags
+    );
+  } catch (error) {
+    console.error("AI分析失败:", error);
+    // 如果AI分析失败，仍然返回基本数据
+  }
 
   return json(
     {
@@ -180,12 +190,12 @@ export default function AnalyzePage() {
   } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const [editedTitle, setEditedTitle] = useState(
-    knowledgePoint.title || analysis.title
+    knowledgePoint.title || (analysis?.title || "")
   );
   const [editedTags, setEditedTags] = useState(
     knowledgePoint.tags
       ?.map((tag) => (typeof tag === "string" ? tag : tag.name))
-      .join(", ") || analysis.suggested_tags.join(", ")
+      .join(", ") || (analysis?.suggested_tags?.join(", ") || "")
   );
   const [editedTopicId, setEditedTopicId] = useState(() => {
     // 优先使用现有知识点的主题
@@ -214,7 +224,7 @@ export default function AnalyzePage() {
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <Header user={user} isDemo={isDemo} />
 
       <div className="px-6 py-12">
@@ -230,8 +240,8 @@ export default function AnalyzePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* 左侧：AI摘要 + 原始内容 */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 space-y-6">
-              {/* AI 摘要 - 移到前面 */}
-              {analysis.summary && (
+              {/* AI 摘要 */}
+              {analysis?.summary && (
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
                   <h4 className="text-sm font-medium text-blue-900 mb-3 flex items-center">
                     <span className="mr-2">🤖</span>
@@ -271,9 +281,11 @@ export default function AnalyzePage() {
               <h3 className="text-lg font-semibold text-amber-900 mb-6 flex items-center">
                 <span className="mr-2">🐿️</span>
                 小松鼠的分析结果
-                <span className="ml-2 px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">
-                  置信度: {Math.round(analysis.confidence * 100)}%
-                </span>
+                {analysis && (
+                  <span className="ml-2 px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">
+                    置信度: {Math.round(analysis.confidence * 100)}%
+                  </span>
+                )}
               </h3>
 
               <Form method="post" className="space-y-6">
@@ -291,7 +303,7 @@ export default function AnalyzePage() {
                 <input
                   type="hidden"
                   name="summary"
-                  value={analysis.summary || ""}
+                  value={analysis?.summary || ""}
                 />
                 <input
                   type="hidden"

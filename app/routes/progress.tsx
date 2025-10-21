@@ -13,6 +13,7 @@ import { analyzeLearningNote } from "~/lib/openai.server";
 import { getCurrentUser, createAnonymousCookie } from "~/lib/auth.server";
 import Header from "~/components/Header";
 import PageTitle from "~/components/PageTitle";
+import BackLink from "~/components/BackLink";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await initDatabase();
@@ -22,6 +23,60 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const topicId = url.searchParams.get("topicId");
   const knowledgeId = url.searchParams.get("knowledgeId");
 
+  // Handle individual knowledge item viewing
+  if (knowledgeId) {
+    const { getKnowledgePoint } = await import("~/lib/db.server");
+    const {
+      user,
+      anonymousId,
+      isDemo,
+      headers: authHeaders,
+    } = await getCurrentUser(request);
+    const userId = user?.id || anonymousId;
+
+    const knowledgePoint = await getKnowledgePoint(knowledgeId, userId);
+
+    if (!knowledgePoint) {
+      return redirect("/");
+    }
+
+    // If already completed, redirect to analyze page
+    if (knowledgePoint.processing_status === "completed") {
+      return redirect(`/analyze?id=${knowledgeId}`);
+    }
+
+    // If failed, show error page or retry
+    if (knowledgePoint.processing_status === "failed") {
+      return json(
+        {
+          content: knowledgePoint.content,
+          knowledgeId,
+          selectedTopic: null,
+          analysis: null,
+          user,
+          isDemo,
+          error: "分析失败，请重试",
+        },
+        { headers: authHeaders }
+      );
+    }
+
+    // Still processing - show content and simulate progress
+    return json(
+      {
+        content: knowledgePoint.content,
+        knowledgeId,
+        selectedTopic: null,
+        analysis: null,
+        user,
+        isDemo,
+        isProcessing: true,
+      },
+      { headers: authHeaders }
+    );
+  }
+
+  // Original flow for direct content submission
   if (!content) {
     return redirect("/");
   }
@@ -100,11 +155,34 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function ProgressPage() {
-  const { content, analysis, selectedTopic, knowledgeId, user, isDemo } =
+  const { content, analysis, selectedTopic, knowledgeId, user, isDemo, isProcessing, error } =
     useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState<"processing" | "completed" | "failed">("processing");
+
+  // Handle error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden">
+        <Header user={user} isDemo={isDemo} />
+        <div className="flex items-center justify-center min-h-screen p-6 relative z-10">
+          <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl p-8 max-w-md w-full text-center shadow-xl border border-red-200 dark:border-red-800">
+            <div className="text-6xl mb-4">❌</div>
+            <PageTitle
+              title="分析失败"
+              subtitle="小松鼠遇到了点问题，请重试"
+              icon="❌"
+              className="mb-6"
+            />
+            <div className="text-red-600 mb-6">{error}</div>
+            <BackLink to="/" text="返回首页" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const steps = [
     { text: "🐿️ 小松鼠正在仔细阅读...", emoji: "📖" },
@@ -159,7 +237,7 @@ export default function ProgressPage() {
   }, [progress, analysis, knowledgeId]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden">
       <Header user={user} isDemo={isDemo} />
       {/* 背景装饰 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -176,6 +254,10 @@ export default function ProgressPage() {
 
       <div className="flex items-center justify-center min-h-screen p-6 relative z-10">
         <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-8 max-w-md w-full text-center shadow-xl border border-amber-200">
+          {/* Breadcrumb navigation */}
+          <div className="mb-4">
+            <BackLink to="/" text="← 返回首页" />
+          </div>
           {/* 松鼠动画 */}
           <div className="mb-8">
             <div className="text-8xl mb-4 animate-bounce-slow">🐿️</div>

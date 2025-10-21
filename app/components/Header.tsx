@@ -1,5 +1,6 @@
 import { Link, useLocation, Form } from "@remix-run/react";
 import { useState } from "react";
+import { Dialog, Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import ThemeToggle from "./ThemeToggle";
 
 interface User {
@@ -16,13 +17,10 @@ interface HeaderProps {
 
 export default function Header({ user, isDemo = false }: HeaderProps) {
   const location = useLocation();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // 处理注销
   const handleLogout = async () => {
     try {
-      // 关闭移动端菜单
-      setIsMobileMenuOpen(false);
 
       // 发送注销请求
       const response = await fetch("/auth/logout", {
@@ -210,27 +208,12 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
             </div>
           )}
 
-          {/* 汉堡菜单按钮 */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 rounded-lg text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-900/20 transition-colors"
-            aria-label="打开菜单"
-          >
-            {isMobileMenuOpen ? (
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            ) : (
+          {/* 移动端菜单 */}
+          <Menu as="div" className="relative">
+            <MenuButton
+              className="p-2 rounded-lg text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-900/20 transition-colors"
+              aria-label="打开菜单"
+            >
               <svg
                 className="w-5 h-5"
                 fill="none"
@@ -244,77 +227,82 @@ export default function Header({ user, isDemo = false }: HeaderProps) {
                   d="M4 6h16M4 12h16M4 18h16"
                 />
               </svg>
-            )}
-          </button>
+            </MenuButton>
+
+            <MenuItems className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
+              <div className="p-2 space-y-1">
+                {navigationLinks.map((link) => (
+                  <MenuItem key={link.to}>
+                    <Link
+                      to={link.to}
+                      className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-all w-full text-left ${
+                        isActiveLink(link.to)
+                          ? "bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100"
+                          : "text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                      }`}
+                    >
+                      <span className="text-lg">{link.icon}</span>
+                      <span className="font-medium">{link.label}</span>
+                    </Link>
+                  </MenuItem>
+                ))}
+
+                {/* 用户相关链接 - 移动端 */}
+                {user ? (
+                  <>
+                    <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
+                    <MenuItem disabled>
+                      <div className="flex items-center space-x-3 px-3 py-2 text-amber-900 dark:text-amber-100 opacity-75">
+                        <span className="text-lg">👤</span>
+                        <div>
+                          <div className="font-medium text-sm">
+                            {user.name || "用户"}
+                          </div>
+                          <div className="text-xs text-amber-600 dark:text-amber-400">
+                            {user.email}
+                          </div>
+                        </div>
+                      </div>
+                    </MenuItem>
+                    <MenuItem>
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="w-full flex items-center space-x-3 px-3 py-3 text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors text-left"
+                      >
+                        <span className="text-lg">👋</span>
+                        <span className="font-medium">注销</span>
+                      </button>
+                    </MenuItem>
+                  </>
+                ) : (
+                  <>
+                    <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
+                    <MenuItem>
+                      <Link
+                        to="/auth/login"
+                        className="flex items-center space-x-3 px-3 py-3 text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors w-full text-left"
+                      >
+                        <span className="text-lg">🔑</span>
+                        <span className="font-medium">登录</span>
+                      </Link>
+                    </MenuItem>
+                    <MenuItem>
+                      <Link
+                        to="/auth/register"
+                        className="flex items-center space-x-3 px-3 py-3 bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700 text-white rounded-lg transition-colors w-full text-left"
+                      >
+                        <span className="text-lg">✨</span>
+                        <span className="font-medium">注册</span>
+                      </Link>
+                    </MenuItem>
+                  </>
+                )}
+              </div>
+            </MenuItems>
+          </Menu>
         </div>
       </div>
-
-      {/* 移动端下拉菜单 */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden mt-3 py-3 border-t border-amber-100 dark:border-amber-800 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm">
-          <div className="space-y-1">
-            {navigationLinks.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`flex items-center space-x-3 px-3 py-3 rounded-lg mx-2 transition-all ${
-                  isActiveLink(link.to)
-                    ? "bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100"
-                    : "text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 hover:bg-amber-50 dark:hover:bg-amber-900/20"
-                }`}
-              >
-                <span className="text-lg">{link.icon}</span>
-                <span className="font-medium">{link.label}</span>
-              </Link>
-            ))}
-
-            {/* 用户相关链接 - 移动端 */}
-            {user ? (
-              <div className="border-t border-amber-100 dark:border-amber-800 mt-3 pt-3 mx-2">
-                <div className="flex items-center space-x-3 px-3 py-2 text-amber-900 dark:text-amber-100">
-                  <span className="text-lg">👤</span>
-                  <div>
-                    <div className="font-medium text-sm">
-                      {user.name || "用户"}
-                    </div>
-                    <div className="text-xs text-amber-600 dark:text-amber-400">
-                      {user.email}
-                    </div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="w-full flex items-center space-x-3 px-3 py-3 text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
-                >
-                  <span className="text-lg">👋</span>
-                  <span className="font-medium">注销</span>
-                </button>
-              </div>
-            ) : (
-              <div className="border-t border-amber-100 dark:border-amber-800 mt-3 pt-3 mx-2 space-y-1">
-                <Link
-                  to="/auth/login"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center space-x-3 px-3 py-3 text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
-                >
-                  <span className="text-lg">🔑</span>
-                  <span className="font-medium">登录</span>
-                </Link>
-                <Link
-                  to="/auth/register"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center space-x-3 px-3 py-3 bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700 text-white rounded-lg transition-colors"
-                >
-                  <span className="text-lg">✨</span>
-                  <span className="font-medium">注册</span>
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </nav>
   );
 }

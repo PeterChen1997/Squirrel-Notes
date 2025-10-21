@@ -205,7 +205,7 @@ export default function KnowledgeDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <Header user={user} isDemo={isDemo} />
 
       <div className="px-6 py-8">
@@ -281,8 +281,8 @@ export default function KnowledgeDetailPage() {
                     </div>
 
                     {/* 学习主题选择 */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
-                      <Label className="text-blue-900 mb-3 flex items-center">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
+                      <Label className="text-blue-900 dark:text-blue-100 mb-3 flex items-center">
                         <span className="mr-2">🎯</span>
                         选择学习主题
                       </Label>
@@ -330,7 +330,7 @@ export default function KnowledgeDetailPage() {
                     </div>
 
                     {/* 操作按钮 */}
-                    <div className="flex space-x-4 pt-4 border-t">
+                    <div className="flex space-x-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                       <button
                         type="submit"
                         disabled={isSubmitting}
@@ -394,9 +394,9 @@ export default function KnowledgeDetailPage() {
                   /* 查看模式 */
                   <div className="p-6">
                     {/* 头部信息 */}
-                    <div className="mb-6 pb-6 border-b border-gray-100">
+                    <div className="mb-6 pb-6 border-b border-gray-100 dark:border-gray-700">
                       <div className="flex justify-between items-start mb-4">
-                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
                           {knowledgePoint.title || "无标题"}
                         </h1>
                         <button
@@ -419,7 +419,7 @@ export default function KnowledgeDetailPage() {
                         </button>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                         <div className="flex items-center">
                           <svg
                             className="w-4 h-4 mr-2"
@@ -448,7 +448,7 @@ export default function KnowledgeDetailPage() {
                                 .map((tag, index) => (
                                   <span
                                     key={index}
-                                    className="px-2 py-1 bg-blue-100 text-blue-700 text-sm rounded-full"
+                                    className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm rounded-full"
                                   >
                                     {typeof tag === "string" ? tag : tag.name}
                                   </span>
@@ -461,12 +461,12 @@ export default function KnowledgeDetailPage() {
                     {/* AI 摘要 */}
                     {knowledgePoint.summary && (
                       <div className="mb-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
                           <span className="mr-2">🤖</span>
                           AI 智能摘要
                         </h3>
-                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
-                          <p className="text-blue-800 leading-relaxed">
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                          <p className="text-blue-800 dark:text-blue-200 leading-relaxed">
                             {knowledgePoint.summary}
                           </p>
                         </div>
@@ -475,11 +475,11 @@ export default function KnowledgeDetailPage() {
 
                     {/* 内容 */}
                     <div className="mb-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
                         学习内容
                       </h3>
                       <div className="prose max-w-none">
-                        <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                        <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
                           {knowledgePoint.content}
                         </p>
                       </div>
@@ -488,14 +488,14 @@ export default function KnowledgeDetailPage() {
                     {/* 标签 */}
                     {knowledgePoint.tags && knowledgePoint.tags.length > 0 && (
                       <div className="mb-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
                           标签
                         </h3>
                         <div className="flex flex-wrap gap-2">
                           {knowledgePoint.tags.map((tag, index) => (
                             <span
                               key={index}
-                              className="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full"
+                              className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm rounded-full"
                             >
                               {typeof tag === "string" ? tag : tag.name}
                             </span>
@@ -551,8 +551,8 @@ export default function KnowledgeDetailPage() {
 
               {/* 相关知识点 */}
               {relatedPoints.length > 0 && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                     <span className="mr-2">🔗</span>
                     相关知识点
                   </h3>
@@ -561,12 +561,12 @@ export default function KnowledgeDetailPage() {
                       <Link
                         key={point.id}
                         to={`/knowledge/${point.id}`}
-                        className="block p-3 bg-gray-50 rounded-lg hover:bg-blue-50 transition-all"
+                        className="block p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
                       >
-                        <h4 className="font-medium text-gray-900 text-sm line-clamp-2">
+                        <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm line-clamp-2">
                           {point.title || "无标题"}
                         </h4>
-                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
                           {point.content}
                         </p>
                         <div className="flex items-center justify-between mt-2">
@@ -575,7 +575,7 @@ export default function KnowledgeDetailPage() {
                               point.tags.slice(0, 2).map((tag, idx) => (
                                 <span
                                   key={idx}
-                                  className="text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded-full"
+                                  className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 rounded-full"
                                 >
                                   {typeof tag === "string" ? tag : tag.name}
                                 </span>
@@ -589,8 +589,8 @@ export default function KnowledgeDetailPage() {
               )}
 
               {/* 快速操作 */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                   快速操作
                 </h3>
                 <div className="space-y-3">
@@ -602,14 +602,14 @@ export default function KnowledgeDetailPage() {
                   </Link>
                   <Link
                     to="/knowledge"
-                    className="block w-full px-4 py-3 border border-gray-300 text-gray-700 text-center rounded-lg hover:bg-gray-50 transition-all"
+                    className="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-center rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
                   >
                     浏览知识库
                   </Link>
 
                   {/* 返回主题详情链接 */}
                   {learningTopic && (
-                    <div className="pt-3 border-t border-gray-100">
+                    <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
                       <BackLink
                         to={`/knowledge/topic/${learningTopic.id}`}
                         text="返回主题详情"

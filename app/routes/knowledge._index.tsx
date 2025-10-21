@@ -301,11 +301,11 @@ export default function KnowledgeIndex() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="搜索知识点..."
-                  className="w-full px-4 py-3 pl-12 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 pl-12 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                 />
                 <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
                   <svg
-                    className="w-5 h-5 text-gray-400"
+                    className="w-5 h-5 text-gray-400 dark:text-gray-500"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -333,7 +333,7 @@ export default function KnowledgeIndex() {
             <div className="space-y-3 sm:space-y-0 sm:flex sm:flex-wrap sm:gap-4">
               {/* 主题筛选 */}
               <div className="flex-1 sm:flex-none">
-                <Label className="hidden sm:block mb-2">学习主题</Label>
+                <Label className="hidden sm:block mb-2 text-gray-900 dark:text-gray-100">学习主题</Label>
                 <div className="flex gap-2">
                   <select
                     value={selectedTopic || ""}
@@ -344,7 +344,7 @@ export default function KnowledgeIndex() {
                         params.set("tag", selectedTag);
                       window.location.href = `/knowledge?${params.toString()}`;
                     }}
-                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   >
                     <option value="">📖 所有主题</option>
                     {topics.map((topic) => (
@@ -366,7 +366,7 @@ export default function KnowledgeIndex() {
 
               {/* 标签筛选 */}
               <div className="flex-1 sm:flex-none">
-                <Label className="hidden sm:block text-gray-700 mb-2">
+                <Label className="hidden sm:block text-gray-900 dark:text-gray-100 mb-2">
                   标签筛选
                 </Label>
                 <select
@@ -378,7 +378,7 @@ export default function KnowledgeIndex() {
                       params.set("tag", e.target.value);
                     window.location.href = `/knowledge?${params.toString()}`;
                   }}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 >
                   <option value="all">🏷️ 所有标签</option>
                   {allTags.map((tag) => (

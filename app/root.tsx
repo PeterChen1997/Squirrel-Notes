@@ -9,6 +9,7 @@ import {
 import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { initDatabase } from "~/lib/db.server";
+import { Toaster } from "react-hot-toast";
 
 import "./tailwind.css";
 
@@ -96,6 +97,43 @@ export default function App() {
   return (
     <>
       <Outlet />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 5000,
+          style: {
+            background: '#fff',
+            color: '#374151',
+            border: '1px solid #f59e0b',
+            borderRadius: '0.75rem',
+            fontSize: '0.875rem',
+            fontWeight: '500',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+            style: {
+              background: '#f0fdf4',
+              color: '#166534',
+              border: '1px solid #86efac',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+            style: {
+              background: '#fef2f2',
+              color: '#991b1b',
+              border: '1px solid #fca5a5',
+            },
+          },
+        }}
+      />
     </>
   );
 }

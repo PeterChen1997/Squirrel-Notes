@@ -1,5 +1,6 @@
 import React from "react";
-import Label from "./Label";
+import { Label } from "@headlessui/react";
+import LabelComponent from "./Label";
 
 interface SelectProps
   extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "size"> {
@@ -42,7 +43,15 @@ export default function Select({
 
   return (
     <div className="space-y-2">
-      {label && <Label htmlFor={props.id || props.name}>{label}</Label>}
+      {label && (
+        <Label
+          htmlFor={props.id || props.name}
+          className="block text-sm font-medium text-gray-900 dark:text-gray-100"
+        >
+          {label}
+          {props.required && <span className="text-red-500 ml-1">*</span>}
+        </Label>
+      )}
       <select className={classes} {...props}>
         {options.map((option) => (
           <option
