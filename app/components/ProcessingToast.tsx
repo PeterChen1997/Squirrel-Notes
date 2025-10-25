@@ -4,14 +4,18 @@ import { useNavigate } from "@remix-run/react";
 interface ProcessingToastProps {
   knowledgeId: string;
   content: string;
-  t: any; // toast function from react-hot-toast
+  t: {
+    (message: string | JSX.Element, options?: { id?: string; duration?: number }): string | void;
+    success: (message: string, options?: { id?: string; duration?: number }) => string | void;
+    error: (message: string, options?: { id?: string; duration?: number }) => string | void;
+    dismiss: (id?: string) => void;
+  };
 }
 
 export function ProcessingToast({ knowledgeId, content, t }: ProcessingToastProps) {
   const [countdown, setCountdown] = useState(5);
   const [status, setStatus] = useState<"processing" | "completed" | "failed">("processing");
   const [progress, setProgress] = useState(0);
-  const [finalTopicId, setFinalTopicId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // Countdown timer and progress simulation with status checking
@@ -32,30 +36,28 @@ export function ProcessingToast({ knowledgeId, content, t }: ProcessingToastProp
     // 检查知识点状态的函数
     const checkKnowledgeStatus = async () => {
       try {
-        // 这里应该调用API来检查知识点状态
-        // 由于这是客户端组件，我们需要通过API路由来获取状态
+        console.log("Checking knowledge status for:", knowledgeId);
         const response = await fetch(`/api/knowledge/${knowledgeId}/status`);
+        console.log("API response status:", response.status);
+
         if (response.ok) {
           const data = await response.json();
+          console.log("Knowledge status data:", data);
+
           if (data.status === "completed") {
             setStatus("completed");
             setProgress(100);
-            if (data.learning_topic_id) {
-              setFinalTopicId(data.learning_topic_id);
-            }
           } else if (data.status === "failed") {
             setStatus("failed");
           }
+          // 如果还在处理中，继续当前状态
         } else {
-          // 如果API调用失败，假设完成但不设置topicID
-          setStatus("completed");
-          setProgress(100);
+          console.warn("API call failed with status:", response.status);
+          // 如果API调用失败，暂时不改变状态，继续检查
         }
       } catch (error) {
         console.error("Error checking knowledge status:", error);
-        // 出错时也假设完成但不设置topicID
-        setStatus("completed");
-        setProgress(100);
+        // 出错时暂时不改变状态，继续检查
       }
     };
 
@@ -91,13 +93,11 @@ export function ProcessingToast({ knowledgeId, content, t }: ProcessingToastProp
       // 跳转到分析进度页面，显示AI分析进度
       navigate(`/progress?knowledgeId=${knowledgeId}&content=${encodeURIComponent(content)}`);
     } else if (status === "completed") {
-      // 跳转到最终的topic详情页面
-      if (finalTopicId) {
-        navigate(`/knowledge/topic/${finalTopicId}`);
-      } else {
-        // 如果没有topicID，跳转到知识库首页
-        navigate("/knowledge");
-      }
+      // 跳转到分析页面
+      navigate(`/analyze?id=${knowledgeId}`);
+    } else if (status === "failed") {
+      // 分析失败，跳转到首页重试
+      navigate("/");
     }
     t.dismiss(`processing-${knowledgeId}`);
   };
@@ -120,7 +120,7 @@ export function ProcessingToast({ knowledgeId, content, t }: ProcessingToastProp
       case "processing":
         return `小松鼠正在分析... ${countdown}s`;
       case "completed":
-        return "分析完成！点击查看";
+        return "分析完成！点击查看详情";
       case "failed":
         return "分析失败！点击重试";
       default:
@@ -156,12 +156,19 @@ export function ProcessingToast({ knowledgeId, content, t }: ProcessingToastProp
 
   return (
     <div
-      onClick={handleClick}
-      className={`flex items-center p-4 border rounded-lg shadow-lg cursor-pointer hover:opacity-90 transition-all max-w-sm min-w-[300px] ${getStatusColor()}`}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log("Toast clicked, status:", status);
+        handleClick();
+      }}
+      className={`flex items-center p-4 border rounded-lg shadow-lg cursor-pointer hover:opacity-90 transition-all max-w-sm min-w-[300px] ${getStatusColor()} hover:scale-105 active:scale-95`}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          e.stopPropagation();
           handleClick();
         }
       }}
@@ -193,7 +200,7 @@ export function ProcessingToast({ knowledgeId, content, t }: ProcessingToastProp
 
       <div className="flex-shrink-0 ml-3">
         <div className="text-xs text-gray-500 font-medium">
-          {status === "processing" ? `${countdown}s` : status === "completed" ? "查看" : "重试"}
+          {status === "processing" ? `${countdown}s` : status === "completed" ? "查看详情" : "重新记录"}
         </div>
       </div>
     </div>

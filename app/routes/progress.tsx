@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { redirect, json } from "@remix-run/node";
-import { useLoaderData, useNavigation, Link, Form } from "@remix-run/react";
+import { useLoaderData, Form } from "@remix-run/react";
 import { useState, useEffect } from "react";
 import {
   getLearningTopic,
@@ -10,7 +10,7 @@ import {
   updateKnowledgePoint,
 } from "~/lib/db.server";
 import { analyzeLearningNote } from "~/lib/openai.server";
-import { getCurrentUser, createAnonymousCookie } from "~/lib/auth.server";
+import { getCurrentUser } from "~/lib/auth.server";
 import Header from "~/components/Header";
 import PageTitle from "~/components/PageTitle";
 import BackLink from "~/components/BackLink";
@@ -121,7 +121,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   await initDatabase();
 
   const { user, anonymousId } = await getCurrentUser(request);
-  const userId = user?.id || anonymousId;
 
   const formData = await request.formData();
   const intent = formData.get("intent");
@@ -155,34 +154,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function ProgressPage() {
-  const { content, analysis, selectedTopic, knowledgeId, user, isDemo, isProcessing, error } =
+  const { analysis, knowledgeId, user, isDemo, isProcessing, error } =
     useLoaderData<typeof loader>();
-  const navigation = useNavigation();
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState<"processing" | "completed" | "failed">("processing");
-
-  // Handle error state
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden">
-        <Header user={user} isDemo={isDemo} />
-        <div className="flex items-center justify-center min-h-screen p-6 relative z-10">
-          <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl p-8 max-w-md w-full text-center shadow-xl border border-red-200 dark:border-red-800">
-            <div className="text-6xl mb-4">❌</div>
-            <PageTitle
-              title="分析失败"
-              subtitle="小松鼠遇到了点问题，请重试"
-              icon="❌"
-              className="mb-6"
-            />
-            <div className="text-red-600 mb-6">{error}</div>
-            <BackLink to="/" text="返回首页" />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const [knowledgeStatus, setKnowledgeStatus] = useState<"processing" | "completed" | "failed">(isProcessing ? "processing" : "processing");
 
   const steps = [
     { text: "🐿️ 小松鼠正在仔细阅读...", emoji: "📖" },
@@ -217,9 +193,45 @@ export default function ProgressPage() {
     }, 1000);
 
     return () => clearInterval(stepTimer);
-  }, []);
+  }, [steps.length]);
 
-  // 3秒后自动提交分析结果
+  // 检查知识点状态（当通过 knowledgeId 访问时）
+  useEffect(() => {
+    if (isProcessing && knowledgeId) {
+      const checkStatus = async () => {
+        try {
+          const response = await fetch(`/api/knowledge/${knowledgeId}/status`);
+          if (response.ok) {
+            const data = await response.json();
+            console.log("Knowledge status in progress page:", data);
+
+            if (data.status === "completed") {
+              setKnowledgeStatus("completed");
+              setProgress(100);
+              // 直接跳转到分析页面
+              setTimeout(() => {
+                window.location.href = `/analyze?id=${knowledgeId}`;
+              }, 1000);
+            } else if (data.status === "failed") {
+              setKnowledgeStatus("failed");
+            }
+          }
+        } catch (error) {
+          console.error("Error checking knowledge status in progress page:", error);
+        }
+      };
+
+      // 立即检查一次
+      checkStatus();
+
+      // 每2秒检查一次状态
+      const interval = setInterval(checkStatus, 2000);
+
+      return () => clearInterval(interval);
+    }
+  }, [isProcessing, knowledgeId]);
+
+  // 3秒后自动提交分析结果（当有 analysis 数据时）
   useEffect(() => {
     if (progress >= 100 && analysis && knowledgeId) {
       const redirectTimer = setTimeout(() => {
@@ -235,6 +247,28 @@ export default function ProgressPage() {
       return () => clearTimeout(redirectTimer);
     }
   }, [progress, analysis, knowledgeId]);
+
+  // Handle error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden">
+        <Header user={user} isDemo={isDemo} />
+        <div className="flex items-center justify-center min-h-screen p-6 relative z-10">
+          <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl p-8 max-w-md w-full text-center shadow-xl border border-red-200 dark:border-red-800">
+            <div className="text-6xl mb-4">❌</div>
+            <PageTitle
+              title="分析失败"
+              subtitle="小松鼠遇到了点问题，请重试"
+              icon="❌"
+              className="mb-6"
+            />
+            <div className="text-red-600 dark:text-red-400 mb-6">{error}</div>
+            <BackLink to="/" text="返回首页" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-25 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden">
@@ -281,26 +315,26 @@ export default function ProgressPage() {
             </div>
 
             {/* 当前步骤 */}
-            <div className="text-amber-700 text-base md:text-lg font-medium mb-4 flex items-center justify-center">
+            <div className="text-amber-700 dark:text-amber-300 text-base md:text-lg font-medium mb-4 flex items-center justify-center">
               <span className="mr-2 text-2xl">{steps[currentStep]?.emoji}</span>
               {steps[currentStep]?.text}
             </div>
 
-            <div className="text-amber-500 text-sm">预计需要 3-5 秒</div>
+            <div className="text-amber-500 dark:text-amber-400 text-sm">预计需要 3-5 秒</div>
           </div>
 
           {/* AI分析结果预览 */}
           {analysis && progress >= 80 && (
             <div className="animate-fade-in">
-              <div className="bg-amber-50 rounded-2xl p-4 mb-6 border border-amber-200">
-                <h3 className="text-amber-800 font-semibold mb-3 flex items-center justify-center">
+              <div className="bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-4 mb-6 border border-amber-200 dark:border-amber-800">
+                <h3 className="text-amber-800 dark:text-amber-200 font-semibold mb-3 flex items-center justify-center">
                   <span className="mr-2">🏷️</span>
                   分析结果
                 </h3>
 
                 {/* 智能标签 */}
                 <div className="flex flex-wrap gap-2 justify-center mb-3">
-                  <span className="px-3 py-1 bg-yellow-200 text-yellow-800 text-sm rounded-full">
+                  <span className="px-3 py-1 bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 text-sm rounded-full">
                     🎯 {Math.round(analysis.confidence * 100)}%
                   </span>
                 </div>
@@ -311,7 +345,7 @@ export default function ProgressPage() {
                     {analysis.suggested_tags.slice(0, 3).map((tag, index) => (
                       <span
                         key={index}
-                        className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full"
+                        className="px-2 py-1 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 text-xs rounded-full"
                       >
                         🌱 {tag}
                       </span>
@@ -323,9 +357,19 @@ export default function ProgressPage() {
           )}
 
           {/* 完成状态 */}
-          {progress >= 100 && (
-            <div className="text-green-600 text-base font-medium animate-pulse">
-              🎉 收集完成！正在跳转到整理页面...
+          {(progress >= 100 || knowledgeStatus === "completed") && (
+            <div className="text-green-600 dark:text-green-400 text-base font-medium animate-pulse">
+              🎉 分析完成！正在跳转到整理页面...
+            </div>
+          )}
+
+          {/* 失败状态 */}
+          {knowledgeStatus === "failed" && (
+            <div className="text-red-600 dark:text-red-400 text-base font-medium">
+              ❌ 分析失败！
+              <div className="mt-2">
+                <BackLink to="/" text="返回首页重试" />
+              </div>
             </div>
           )}
 

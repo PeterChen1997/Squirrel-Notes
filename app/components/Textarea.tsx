@@ -1,5 +1,4 @@
 import React from "react";
-import { Label } from "@headlessui/react";
 import LabelComponent from "./Label";
 
 interface TextareaProps
@@ -42,13 +41,12 @@ export default function Textarea({
   return (
     <div className="space-y-2">
       {label && (
-        <Label
+        <LabelComponent
           htmlFor={props.id || props.name}
-          className="block text-sm font-medium text-gray-900 dark:text-gray-100"
+          required={props.required}
         >
           {label}
-          {props.required && <span className="text-red-500 ml-1">*</span>}
-        </Label>
+        </LabelComponent>
       )}
       <textarea className={classes} {...props} />
       {error && (
