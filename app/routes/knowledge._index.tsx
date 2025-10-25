@@ -17,6 +17,7 @@ import Header from "~/components/Header";
 import PageTitle from "~/components/PageTitle";
 import Label from "~/components/Label";
 import AIOverview from "~/components/AIOverview";
+import { KnowledgeCard } from "~/components/KnowledgeCard";
 import { mockTopics, mockKnowledgePoints, mockTags } from "~/data/mockData";
 import {
   isNoContentAnonymousUser,
@@ -25,6 +26,8 @@ import {
   type UserState,
   type ContentState,
 } from "~/lib/user-utils";
+import { Container, Text, Input, Button, Badge } from "~/components/ui";
+import Textarea from "~/components/Textarea";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const {
@@ -333,7 +336,9 @@ export default function KnowledgeIndex() {
             <div className="space-y-3 sm:space-y-0 sm:flex sm:flex-wrap sm:gap-4">
               {/* 主题筛选 */}
               <div className="flex-1 sm:flex-none">
-                <Label className="hidden sm:block mb-2 text-gray-900 dark:text-gray-100">学习主题</Label>
+                <Label className="hidden sm:block mb-2 text-gray-900 dark:text-gray-100">
+                  学习主题
+                </Label>
                 <div className="flex gap-2">
                   <select
                     value={selectedTopic || ""}
@@ -397,7 +402,7 @@ export default function KnowledgeIndex() {
 
           {/* 统计信息 */}
           <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <Container variant="card" padding="md">
               <div className="flex items-center">
                 <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
                   <svg
@@ -415,17 +420,17 @@ export default function KnowledgeIndex() {
                   </svg>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <Text size="sm" color="secondary">
                     总知识点
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  </Text>
+                  <Text size="2xl" weight="bold" color="primary">
                     {knowledgePoints.length}
-                  </p>
+                  </Text>
                 </div>
               </div>
-            </div>
+            </Container>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <Container variant="card" padding="md">
               <div className="flex items-center">
                 <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
                   <svg
@@ -443,17 +448,17 @@ export default function KnowledgeIndex() {
                   </svg>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <Text size="sm" color="secondary">
                     学习主题
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  </Text>
+                  <Text size="2xl" weight="bold" color="primary">
                     {topics.length}
-                  </p>
+                  </Text>
                 </div>
               </div>
-            </div>
+            </Container>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <Container variant="card" padding="md">
               <div className="flex items-center">
                 <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
                   <svg
@@ -471,15 +476,15 @@ export default function KnowledgeIndex() {
                   </svg>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <Text size="sm" color="secondary">
                     标签数量
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  </Text>
+                  <Text size="2xl" weight="bold" color="primary">
                     {allTags.length}
-                  </p>
+                  </Text>
                 </div>
               </div>
-            </div>
+            </Container>
           </div>
 
           {/* 主题列表 */}
@@ -501,67 +506,23 @@ export default function KnowledgeIndex() {
               </button>
             </div>
           ) : (
-            <div className="space-y-6 sm:space-y-8">
-              {topics.map((topic) => {
-                const aiOverview = topic.aiOverview;
-
-                return (
-                  <div
-                    key={topic.id}
-                    className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden"
-                  >
-                    {/* 主题标题栏 */}
-                    <div className="bg-gray-50 dark:bg-gray-700 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 dark:border-gray-600">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center flex-wrap gap-2">
-                          <span className="mr-1 sm:mr-2 text-base sm:text-lg">
-                            📖
-                          </span>
-                          <span className="flex-1 min-w-0 break-words">
-                            {topic.name}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            {topic.id && loadingOverviews.has(topic.id) && (
-                              <div className="flex items-center px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full whitespace-nowrap">
-                                <div className="w-3 h-3 border border-orange-400 border-t-transparent rounded-full animate-spin mr-1"></div>
-                                AI分析中
-                              </div>
-                            )}
-                            {topic.id && recentlyUpdated.has(topic.id) && (
-                              <div className="flex items-center px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full whitespace-nowrap">
-                                <span className="mr-1">✨</span>
-                                已更新
-                              </div>
-                            )}
-                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full whitespace-nowrap">
-                              {topic.knowledgePointsCount} 个知识点
-                            </span>
-                          </div>
-                        </h3>
-                        <Link
-                          to={`/knowledge/topic/${topic.id}`}
-                          className="ml-4 px-3 py-1 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 transition-colors"
-                        >
-                          查看详情
-                        </Link>
-                      </div>
-                    </div>
-
-                    {/* AI概要区域 */}
-                    <div className="p-4 sm:p-6">
-                      <AIOverview
-                        aiOverview={aiOverview}
-                        topicId={topic.id}
-                        knowledgePointsCount={topic.knowledgePointsCount}
-                        onRegenerateOverview={handleRegenerateOverview}
-                        loadingOverviews={loadingOverviews}
-                        showRegenerateButton={true}
-                        variant="card"
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
+              {topics.map((topic) => (
+                <KnowledgeCard
+                  key={topic.id}
+                  topic={{
+                    ...topic,
+                    aiOverview: topic.aiOverview,
+                  }}
+                  onRegenerateOverview={handleRegenerateOverview}
+                  isLoadingOverview={
+                    topic.id ? loadingOverviews.has(topic.id) : false
+                  }
+                  isRecentlyUpdated={
+                    topic.id ? recentlyUpdated.has(topic.id) : false
+                  }
+                />
+              ))}
             </div>
           )}
         </div>
@@ -569,11 +530,11 @@ export default function KnowledgeIndex() {
 
       {/* 创建主题模态框 */}
       {showCreateTopic && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Container variant="card" padding="lg" className="w-full max-w-md">
+            <Text size="lg" weight="semibold" color="primary" className="mb-4">
               创建新学习主题
-            </h3>
+            </Text>
 
             <Form method="post" onSubmit={() => setShowCreateTopic(false)}>
               <input type="hidden" name="intent" value="create_topic" />
@@ -583,44 +544,48 @@ export default function KnowledgeIndex() {
                   <Label className="mb-2" required>
                     主题名称
                   </Label>
-                  <input
-                    type="text"
+                  <Input
                     name="topicName"
                     required
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     placeholder="例如：网球学习、编程技能等"
+                    variant="amber"
                   />
                 </div>
 
                 <div>
-                  <Label className="text-gray-700 mb-2">主题描述</Label>
-                  <textarea
+                  <Label className="text-gray-700 dark:text-gray-300 mb-2">
+                    主题描述
+                  </Label>
+                  <Textarea
                     name="topicDescription"
                     rows={3}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     placeholder="描述这个学习主题的内容和目标（可选）"
+                    variant="amber"
                   />
                 </div>
               </div>
 
               <div className="flex space-x-3 mt-6">
-                <button
+                <Button
                   type="submit"
                   disabled={navigation.state === "submitting"}
-                  className="flex-1 bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 disabled:bg-gray-400 transition-colors"
+                  loading={navigation.state === "submitting"}
+                  variant="primary"
+                  className="flex-1"
                 >
-                  {navigation.state === "submitting" ? "创建中..." : "创建主题"}
-                </button>
-                <button
+                  创建主题
+                </Button>
+                <Button
                   type="button"
                   onClick={() => setShowCreateTopic(false)}
-                  className="flex-1 border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors"
+                  variant="secondary"
+                  className="flex-1"
                 >
                   取消
-                </button>
+                </Button>
               </div>
             </Form>
-          </div>
+          </Container>
         </div>
       )}
     </div>

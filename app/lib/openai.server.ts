@@ -23,6 +23,8 @@ export interface LearningNoteAnalysis {
     is_new: boolean; // 是否为新创建的主题
     existing_topic_id?: string; // 如果匹配到现有主题，返回ID
   };
+  // 新增学习时长估算
+  estimated_study_minutes: number; // AI 估算的学习时长（分钟）
 }
 
 // 分析学习笔记内容
@@ -83,7 +85,8 @@ ${existingTopicsText}
     "confidence": 0.85,
     "is_new": false,
     "existing_topic_id": "如果匹配到现有主题则填写其ID，否则为null"
-  }
+  },
+  "estimated_study_minutes": 15
 }
 
 主题匹配规则：
@@ -99,6 +102,13 @@ ${existingTopicsText}
 3. 如果现有标签不足以描述内容，可以建议新标签
 4. 标签应该简洁明了，2-4个字为佳
 
+学习时长估算规则：
+1. 基于内容长度和复杂度估算学习时长（分钟）
+2. 考虑内容的理解难度和实践操作需求
+3. 简单概念5-10分钟，中等复杂10-20分钟，复杂概念20-45分钟
+4. 包含代码示例或实践操作的内容适当增加时长
+5. 时长应该反映正常理解和掌握所需的时间
+
 分析要求：
 1. 识别学习领域（技能、理论、实践等）
 2. 提取核心概念和关键信息
@@ -106,6 +116,7 @@ ${existingTopicsText}
 4. 给出分析置信度（0-1之间）
 5. 推荐相关主题和标签
 6. 智能匹配或创建学习主题
+7. 估算合理的学习时长
 
 如果内容不够明确或太简短，confidence应该较低（<0.7），建议使用通用标签。
 `;
@@ -166,6 +177,7 @@ ${existingTopicsText}
         is_new: false,
         existing_topic_id: undefined,
       },
+      estimated_study_minutes: Math.max(5, Math.min(120, analysis.estimated_study_minutes || 15)), // 默认15分钟，范围5-120分钟
     };
   } catch (error) {
     console.error("学习笔记分析失败:", error);
@@ -185,6 +197,7 @@ ${existingTopicsText}
         is_new: false,
         existing_topic_id: undefined,
       },
+      estimated_study_minutes: 15, // 默认15分钟
     };
   }
 }
@@ -327,6 +340,12 @@ export interface TopicOverview {
   learning_progress: string;
   next_steps: string[];
   confidence: number;
+  // 新增的独立 sections
+  total_learning_time: string; // 总学习时长（基于记录时间计算）
+  learning_experience: string; // 学习心得（严格基于原文）
+  understanding_journey: string[]; // 理解历程（每个阶段都基于原文）
+  original_content_summary: string[]; // 原文内容摘要（每条笔记的核心内容）
+  general_suggestions: string[]; // 通用建议（基于学习内容但不添加新信息）
 }
 
 // 生成主题AI概览
@@ -346,6 +365,11 @@ export async function generateTopicOverview(
       key_insights: ["知识点收集中..."],
       learning_progress: "学习进行中",
       next_steps: ["继续添加学习笔记"],
+      total_learning_time: "学习进行中",
+      learning_experience: "暂无心得记录",
+      understanding_journey: ["学习刚开始"],
+      original_content_summary: [],
+      general_suggestions: ["继续学习", "多做练习"],
       confidence: 0.5,
     };
   }
@@ -356,19 +380,16 @@ export async function generateTopicOverview(
       key_insights: ["暂无学习内容"],
       learning_progress: "刚开始学习",
       next_steps: ["添加第一条学习笔记", "制定学习计划"],
+      total_learning_time: "暂无学习记录",
+      learning_experience: "暂无心得记录",
+      understanding_journey: ["准备开始学习"],
+      original_content_summary: [],
+      general_suggestions: ["添加第一条学习笔记", "制定学习计划"],
       confidence: 0.3,
     };
   }
 
   try {
-    const knowledgeContent = knowledgePoints
-      .map(
-        (point, index) =>
-          `${index + 1}. ${point.title || "笔记"}:\n${
-            point.content
-          }\n关键词: ${point.keywords.join(", ")}`
-      )
-      .join("\n\n");
 
     const prompt = `你是一个专业的学习导师，请为"${topicName}"主题进行全面的知识结构化梳理。
 
@@ -407,14 +428,27 @@ ${point.content}
   "experience_summary": ["经验总结1", "经验总结2"],
   "next_steps": ["深入方向1", "深入方向2", "深入方向3"],
   "learning_progress": "详细的学习现状分析和掌握程度评估",
+  "total_learning_time": "学习总时长（基于最早和最新记录时间计算）",
+  "learning_experience": "学习心得总结（严格基于原文中的经验和感悟）",
+  "understanding_journey": ["理解阶段1描述（基于原文）", "理解阶段2描述（基于原文）", "理解阶段3描述（基于原文）"],
+  "original_content_summary": ["笔记1核心内容摘要（基于原文）", "笔记2核心内容摘要（基于原文）"],
+  "general_suggestions": ["通用建议1（基于学习内容）", "通用建议2（基于学习内容）", "通用建议3（基于学习内容）"],
   "confidence": 0.9
 }
 
-要求：
-- 全面性：每个笔记的核心要点都必须体现
-- 结构化：将知识点组织成逻辑框架，必要时拆分多种功能点，如网球正反手分开整理等
-- 实用性：能替代重新阅读所有笔记
-- 深度解读：分析知识点之间的关联`;
+严格要求：
+1. **严格基于原文**：所有分析内容必须来自提供的学习笔记原文，不允许添加任何外部信息或假设
+2. **时间计算**：总学习时长基于最早和最新笔记的记录时间计算
+3. **独立 sections**：
+   - total_learning_time：学习总时长
+   - learning_experience：学习心得（仅基于原文中的经验和感悟）
+   - understanding_journey：理解历程（每个阶段都基于原文内容）
+   - original_content_summary：每条笔记的核心内容摘要
+   - general_suggestions：通用建议（基于学习内容但不添加新信息）
+4. **内容真实性**：每个要点都必须能在原文中找到对应内容
+5. **全面性**：每个笔记的核心要点都必须体现
+6. **结构化**：将知识点组织成逻辑框架
+7. **实用性**：能替代重新阅读所有笔记`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -451,6 +485,13 @@ ${point.content}
       throw new Error("AI 返回的数据格式不正确");
     }
 
+    // 确保新字段都有默认值
+    overview.total_learning_time = overview.total_learning_time || "学习进行中";
+    overview.learning_experience = overview.learning_experience || "暂无心得记录";
+    overview.understanding_journey = overview.understanding_journey || ["学习刚开始"];
+    overview.original_content_summary = overview.original_content_summary || knowledgePoints.map(p => p.content.substring(0, 100) + "...");
+    overview.general_suggestions = overview.general_suggestions || ["继续学习", "多做练习"];
+
     return overview;
   } catch (error) {
     console.error("生成主题概览失败:", error);
@@ -469,6 +510,11 @@ ${point.content}
         "深入探索相关主题",
         "建立完整知识框架",
       ],
+      total_learning_time: "学习进行中",
+      learning_experience: "暂无心得记录",
+      understanding_journey: ["学习刚开始"],
+      original_content_summary: knowledgePoints.map(p => p.content.substring(0, 100) + "..."),
+      general_suggestions: ["继续学习", "多做练习"],
       confidence: 0.6,
     };
   }

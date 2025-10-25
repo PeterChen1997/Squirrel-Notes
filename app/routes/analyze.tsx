@@ -18,14 +18,13 @@ import {
   initDatabase,
 } from "~/lib/db.server";
 import { analyzeLearningNote } from "~/lib/openai.server";
-import { getCurrentUser, createAnonymousCookie } from "~/lib/auth.server";
+import { getCurrentUser } from "~/lib/auth.server";
 import Header from "~/components/Header";
-import BackLink from "~/components/BackLink";
 import Input from "~/components/Input";
-import Textarea from "~/components/Textarea";
 import Select from "~/components/Select";
 import PageTitle from "~/components/PageTitle";
 import Label from "~/components/Label";
+import { Container, Text, Panel, Button, Badge } from "~/components/ui";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await initDatabase();
@@ -162,7 +161,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // 获取 AI 分析摘要
     const summaryFromForm = formData.get("summary") as string;
 
-    // 更新知识点
+    // 计算学习时长（基于内容长度和复杂度的简单估算）
+    const contentLength = content.length;
+    let estimatedMinutes = 15; // 默认15分钟
+
+    // 简单的时长估算逻辑
+    if (contentLength < 200) {
+      estimatedMinutes = 5;
+    } else if (contentLength < 500) {
+      estimatedMinutes = 10;
+    } else if (contentLength < 1000) {
+      estimatedMinutes = 20;
+    } else {
+      estimatedMinutes = Math.min(60, 15 + Math.floor(contentLength / 200));
+    }
+
+    // 更新知识点，包含学习时长
     await updateKnowledgePoint(knowledgeId, {
       title,
       content,
@@ -170,6 +184,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       tag_ids: tagIds,
       keywords: [],
       learning_topic_id: learningTopicId || undefined,
+      study_duration_minutes: estimatedMinutes, // 保存估算的学习时长
     });
 
     return redirect(`/knowledge/${knowledgeId}?updated=true`);
@@ -221,6 +236,18 @@ export default function AnalyzePage() {
       : "";
   });
 
+  // 新增：表单编辑状态控制
+  const [isFormDisabled, setIsFormDisabled] = useState(false);
+
+  // 监听主题更改，当主题被更改后禁用表单
+  const handleTopicChange = (value: string) => {
+    setEditedTopicId(value);
+    if (value && value !== editedTopicId) {
+      // 主题被更改了，禁用表单
+      setIsFormDisabled(true);
+    }
+  };
+
   const isSubmitting = navigation.state === "submitting";
 
   return (
@@ -239,54 +266,50 @@ export default function AnalyzePage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* 左侧：AI摘要 + 原始内容 */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 space-y-6">
+            <Container variant="card" padding="md" className="space-y-6">
               {/* AI 摘要 */}
               {analysis?.summary && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
-                  <h4 className="text-sm font-medium text-blue-900 mb-3 flex items-center">
-                    <span className="mr-2">🤖</span>
-                    AI 智能摘要
-                  </h4>
-                  <p className="text-sm text-blue-800 leading-relaxed">
+                <Panel title="AI 智能摘要" icon="🤖" theme="blue" size="sm">
+                  <Text size="sm" color="primary" className="leading-relaxed">
                     {analysis.summary}
-                  </p>
-                </div>
+                  </Text>
+                </Panel>
               )}
 
               {/* 原始内容 */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Text size="lg" weight="semibold" color="primary" className="mb-4 flex items-center">
                   <span className="mr-2">📝</span>
                   原始内容
-                </h3>
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                </Text>
+                <Container variant="default" padding="sm">
+                  <Text color="primary" className="leading-relaxed whitespace-pre-wrap">
                     {knowledgePoint.content}
-                  </p>
-                </div>
+                  </Text>
+                </Container>
               </div>
 
               {selectedTopic && (
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-700">
-                    <strong>选择的学习主题：</strong>
+                <Container variant="default" padding="sm">
+                  <Text size="sm" color="primary">
+                    <span className="font-medium">选择的学习主题：</span>
                     {selectedTopic.name}
-                  </p>
-                </div>
+                  </Text>
+                </Container>
               )}
-            </div>
+            </Container>
 
             {/* 右侧：AI 分析结果和编辑 */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-              <h3 className="text-lg font-semibold text-amber-900 mb-6 flex items-center">
+            <Container variant="card" padding="md">
+              <Text size="lg" weight="semibold" color="primary" className="mb-6 flex items-center">
                 <span className="mr-2">🐿️</span>
                 小松鼠的分析结果
                 {analysis && (
-                  <span className="ml-2 px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">
+                  <Badge variant="amber" size="sm" className="ml-2">
                     置信度: {Math.round(analysis.confidence * 100)}%
-                  </span>
+                  </Badge>
                 )}
-              </h3>
+              </Text>
 
               <Form method="post" className="space-y-6">
                 <input type="hidden" name="intent" value="update" />
@@ -313,16 +336,19 @@ export default function AnalyzePage() {
                 <input type="hidden" name="intent" value="save" />
 
                 {/* 学习主题选择 - 优化为 select + 自定义输入框 */}
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
-                  <Label className="text-blue-900 mb-3 flex items-center">
-                    <span className="mr-2">🎯</span>
-                    选择学习主题
-                    {analysis.recommended_topic && (
-                      <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                <Panel
+                  title="选择学习主题"
+                  icon="🎯"
+                  theme="blue"
+                  size="sm"
+                >
+                  {analysis?.recommended_topic && (
+                    <div className="mb-3">
+                      <Badge variant="blue" size="sm">
                         AI 推荐: {analysis.recommended_topic.name}
-                      </span>
-                    )}
-                  </Label>
+                      </Badge>
+                    </div>
+                  )}
 
                   <div className="space-y-3">
                     {/* 主题选择下拉框 */}
@@ -330,16 +356,17 @@ export default function AnalyzePage() {
                       name="learningTopicId"
                       value={editedTopicId}
                       onChange={(e) => {
-                        setEditedTopicId(e.target.value);
+                        handleTopicChange(e.target.value);
                         // 当选择自定义时，如果还没有自定义名称且有AI推荐，则填入推荐名称
                         if (
                           e.target.value === "__custom__" &&
                           !customTopicName &&
-                          analysis.recommended_topic?.name
+                          analysis?.recommended_topic?.name
                         ) {
                           setCustomTopicName(analysis.recommended_topic.name);
                         }
                       }}
+                      disabled={isFormDisabled}
                       variant="blue"
                       options={[
                         { value: "", label: "不关联学习主题" },
@@ -363,6 +390,7 @@ export default function AnalyzePage() {
                           required
                           variant="blue"
                           size="sm"
+                          disabled={isFormDisabled}
                         />
                         {analysis.recommended_topic?.description &&
                           customTopicName ===
@@ -374,7 +402,7 @@ export default function AnalyzePage() {
                       </div>
                     )}
                   </div>
-                </div>
+                </Panel>
 
                 {/* 标题编辑 */}
                 <Input
@@ -385,17 +413,21 @@ export default function AnalyzePage() {
                   placeholder="为你的学习笔记起个标题..."
                   required
                   variant="amber"
+                  disabled={isFormDisabled}
                 />
 
                 {/* 标签管理 + AI 洞察合并 */}
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
-                  <Label className="text-green-900 mb-3 flex items-center">
-                    <span className="mr-2">🏷️</span>
-                    智能标签管理
-                    <span className="ml-2 px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
-                      置信度 {Math.round(analysis.confidence * 100)}%
-                    </span>
-                  </Label>
+                <Panel
+                  title="智能标签管理"
+                  icon="🏷️"
+                  theme="green"
+                  size="sm"
+                >
+                  <div className="mb-3">
+                    <Badge variant="green" size="sm">
+                      置信度 {Math.round((analysis?.confidence || 0) * 100)}%
+                    </Badge>
+                  </div>
 
                   {/* 标签输入框 */}
                   <Input
@@ -405,6 +437,7 @@ export default function AnalyzePage() {
                     placeholder="例如：技术要点, 实践经验, 学习心得"
                     variant="green"
                     className="mb-3"
+                    disabled={isFormDisabled}
                   />
 
                   {/* AI 推荐标签和关键词（去重后） */}
@@ -489,40 +522,47 @@ export default function AnalyzePage() {
                       </div>
                     </div>
                   )}
-                </div>
+                </Panel>
 
                 {/* 提交按钮 - 优化样式 */}
-                <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
-                  <button
+                <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <Button
                     type="submit"
+                    variant="primary"
+                    size="lg"
                     disabled={isSubmitting || !editedTitle.trim()}
-                    className="flex-1 py-4 px-6 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-600 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:scale-100"
+                    loading={isSubmitting}
+                    className="flex-1"
                   >
                     {isSubmitting ? (
-                      <div className="flex items-center justify-center">
+                      <>
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                         小松鼠更新中...
-                      </div>
+                      </>
                     ) : (
-                      <span className="flex items-center justify-center">
+                      <>
                         <span className="mr-2">✏️</span>
                         更新笔记
-                      </span>
+                      </>
                     )}
-                  </button>
+                  </Button>
 
                   <Link
                     to="/"
-                    className="px-6 py-4 border-2 border-amber-300 text-amber-700 font-semibold rounded-xl hover:bg-amber-50 transition-all text-center shadow-md hover:shadow-lg"
+                    className="inline-flex"
                   >
-                    <span className="flex items-center justify-center">
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      type="button"
+                    >
                       <span className="mr-2">🔄</span>
                       重新记录
-                    </span>
+                    </Button>
                   </Link>
                 </div>
               </Form>
-            </div>
+            </Container>
           </div>
         </div>
       </div>

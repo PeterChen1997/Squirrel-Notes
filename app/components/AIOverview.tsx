@@ -1,4 +1,3 @@
-import React from "react";
 
 interface AIOverviewData {
   confidence: number;
@@ -8,6 +7,12 @@ interface AIOverviewData {
   experience_summary?: string[];
   next_steps?: string[];
   learning_progress?: string;
+  // 新增的独立 sections
+  total_learning_time?: string;
+  learning_experience?: string;
+  understanding_journey?: string[];
+  original_content_summary?: string[];
+  general_suggestions?: string[];
 }
 
 interface AIOverviewProps {
@@ -169,6 +174,98 @@ export default function AIOverview({
             <span className="">📊 {aiOverview.learning_progress}</span>
             <span className="sm:hidden">{aiOverview.learning_progress}</span>
           </span>
+        </div>
+      )}
+
+      {/* 总学习时长 */}
+      {aiOverview.total_learning_time && (
+        <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-amber-50 rounded-lg dark:bg-amber-900/20">
+          <span className="text-amber-800 text-xs leading-tight dark:text-amber-100">
+            <span className="">⏱️ {aiOverview.total_learning_time}</span>
+          </span>
+        </div>
+      )}
+
+      {/* 学习心得 */}
+      {aiOverview.learning_experience && (
+        <div className="mt-2 sm:mt-3">
+          <h5 className="text-xs sm:text-sm font-medium text-blue-900 mb-1 sm:mb-2">
+            <span className="">💭 学习心得</span>
+          </h5>
+          <div className="p-2 sm:p-3 bg-purple-50 rounded-lg dark:bg-purple-900/20">
+            <p className="text-purple-800 text-xs leading-relaxed dark:text-purple-100">
+              {aiOverview.learning_experience}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 理解历程 */}
+      {aiOverview.understanding_journey && aiOverview.understanding_journey.length > 0 && (
+        <div className="mt-2 sm:mt-3">
+          <h5 className="text-xs sm:text-sm font-medium text-blue-900 mb-1 sm:mb-2">
+            <span className="">🎯 理解历程</span>
+          </h5>
+          <div className="p-2 sm:p-3 bg-green-50 rounded-lg dark:bg-green-900/20">
+            <ul className="space-y-1">
+              {aiOverview.understanding_journey.map((journey: string, index: number) => (
+                <li key={index} className="flex items-start">
+                  <span className="mr-1 text-green-600 text-xs shrink-0 dark:text-green-100">
+                    {index + 1}.
+                  </span>
+                  <span className="text-green-800 text-xs leading-tight dark:text-green-100">
+                    {journey}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* 原文内容摘要 */}
+      {aiOverview.original_content_summary && aiOverview.original_content_summary.length > 0 && (
+        <div className="mt-2 sm:mt-3">
+          <h5 className="text-xs sm:text-sm font-medium text-blue-900 mb-1 sm:mb-2">
+            <span className="">📝 原文内容摘要</span>
+          </h5>
+          <div className="p-2 sm:p-3 bg-gray-50 rounded-lg dark:bg-gray-800">
+            <ul className="space-y-1">
+              {aiOverview.original_content_summary.map((summary: string, index: number) => (
+                <li key={index} className="flex items-start">
+                  <span className="mr-1 text-gray-600 text-xs shrink-0 dark:text-gray-100">
+                    •
+                  </span>
+                  <span className="text-gray-800 text-xs leading-tight dark:text-gray-100">
+                    {summary}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* 通用建议 */}
+      {aiOverview.general_suggestions && aiOverview.general_suggestions.length > 0 && (
+        <div className="mt-2 sm:mt-3">
+          <h5 className="text-xs sm:text-sm font-medium text-blue-900 mb-1 sm:mb-2">
+            <span className="">💡 通用建议</span>
+          </h5>
+          <div className="p-2 sm:p-3 bg-blue-50 rounded-lg dark:bg-blue-900/20">
+            <ul className="space-y-1">
+              {aiOverview.general_suggestions.map((suggestion: string, index: number) => (
+                <li key={index} className="flex items-start">
+                  <span className="mr-1 text-blue-600 text-xs shrink-0 dark:text-blue-100">
+                    →
+                  </span>
+                  <span className="text-blue-800 text-xs leading-tight dark:text-blue-100">
+                    {suggestion}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
     </div>

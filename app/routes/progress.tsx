@@ -134,12 +134,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     try {
-      // 更新知识点 with AI分析结果
+      // 更新知识点 with AI分析结果，包含学习时长
       await updateKnowledgePoint(knowledgeId, {
         title: analysis.title || "未命名知识点",
         summary: analysis.summary || "",
         confidence: analysis.confidence || 0.8,
         processing_status: "completed",
+        study_duration_minutes: analysis.estimated_study_minutes || 15, // 存储AI估算的学习时长
       });
 
       // 跳转到analyze页面

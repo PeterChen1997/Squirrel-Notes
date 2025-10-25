@@ -137,6 +137,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           confidence: analysis.confidence || 0.8,
           learning_topic_id: finalTopicId,
           processing_status: "completed",
+          study_duration_minutes: analysis.estimated_study_minutes || 15, // 保存AI估算的学习时长
         });
       } catch (error) {
         console.error("Background AI analysis failed:", error);

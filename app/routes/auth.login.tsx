@@ -7,6 +7,7 @@ import {
 } from "@remix-run/node";
 import { Form, Link, useActionData, useNavigation } from "@remix-run/react";
 import Label from "~/components/Label";
+import { Container, Text, Button } from "~/components/ui";
 import {
   loginUser,
   createSession,
@@ -97,29 +98,31 @@ export default function Login() {
             <Link to="/" className="inline-flex items-center space-x-3 mb-4">
               <div className="text-4xl">🐿️</div>
               <div>
-                <h1 className="text-2xl font-bold text-amber-900 dark:text-amber-100">
+                <Text size="xl" weight="bold" color="primary" className="text-amber-900 dark:text-amber-100">
                   松鼠随记
-                </h1>
-                <div className="text-sm text-amber-600 dark:text-amber-400">
+                </Text>
+                <Text size="sm" color="secondary" className="text-amber-600 dark:text-amber-400">
                   勤奋收集知识
-                </div>
+                </Text>
               </div>
             </Link>
-            <p className="text-amber-700 dark:text-amber-300 text-lg">
+            <Text size="lg" color="primary" className="text-amber-700 dark:text-amber-300">
               欢迎回来！
-            </p>
-            <p className="text-amber-600 dark:text-amber-400 text-sm mt-1">
+            </Text>
+            <Text size="sm" color="secondary" className="text-amber-600 dark:text-amber-400 mt-1">
               登录后继续收集你的知识宝藏
-            </p>
+            </Text>
           </div>
 
           {/* 登录表单 */}
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-200 dark:bg-gray-800/90 dark:border-gray-700 p-6">
+          <Container variant="glass" padding="md">
             <Form method="post" className="space-y-4">
               {actionData?.error && (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
-                  {actionData.error}
-                </div>
+                <Container variant="default" padding="sm" className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                  <Text size="sm" color="error" className="text-red-700 dark:text-red-300">
+                    {actionData.error}
+                  </Text>
+                </Container>
               )}
 
               <div>
@@ -156,28 +159,19 @@ export default function Login() {
                 />
               </div>
 
-              <button
+              <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-medium rounded-lg hover:from-amber-600 hover:to-orange-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg transform hover:scale-[1.02] disabled:scale-100"
+                loading={isSubmitting}
+                className="w-full"
               >
-                {isSubmitting ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    登录中...
-                  </div>
-                ) : (
-                  <span className="flex items-center justify-center">
-                    <span className="mr-2">🔑</span>
-                    登录
-                  </span>
-                )}
-              </button>
+                登录
+              </Button>
             </Form>
 
             {/* 注册链接 */}
             <div className="mt-6 text-center">
-              <p className="text-amber-600 dark:text-amber-400 text-sm">
+              <Text size="sm" color="secondary" className="text-amber-600 dark:text-amber-400">
                 还没有账号？
                 <Link
                   to="/auth/register"
@@ -185,7 +179,7 @@ export default function Login() {
                 >
                   立即注册
                 </Link>
-              </p>
+              </Text>
             </div>
 
             {/* 返回首页 */}
@@ -195,10 +189,12 @@ export default function Login() {
                 className="text-amber-500 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-300 text-sm inline-flex items-center transition-colors"
               >
                 <span className="mr-1">←</span>
-                继续浏览示例内容
+                <Text size="sm" as="span">
+                  继续浏览示例内容
+                </Text>
               </Link>
             </div>
-          </div>
+          </Container>
         </div>
       </div>
     </div>

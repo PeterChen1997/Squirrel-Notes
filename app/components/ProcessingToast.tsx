@@ -75,7 +75,7 @@ export function ProcessingToast({ knowledgeId, content, t }: ProcessingToastProp
           id: `processing-${knowledgeId}`,
           duration: 3000,
         });
-      }, 1000);
+      }, 500); // 减少延迟从1秒到0.5秒
       return () => clearTimeout(dismissTimer);
     } else if (status === "failed") {
       const dismissTimer = setTimeout(() => {
@@ -83,23 +83,29 @@ export function ProcessingToast({ knowledgeId, content, t }: ProcessingToastProp
           id: `processing-${knowledgeId}`,
           duration: 5000,
         });
-      }, 1000);
+      }, 500); // 减少延迟从1秒到0.5秒
       return () => clearTimeout(dismissTimer);
     }
   }, [status, knowledgeId, t]);
 
   const handleClick = () => {
-    if (status === "processing") {
-      // 跳转到分析进度页面，显示AI分析进度
-      navigate(`/progress?knowledgeId=${knowledgeId}&content=${encodeURIComponent(content)}`);
-    } else if (status === "completed") {
-      // 跳转到分析页面
-      navigate(`/analyze?id=${knowledgeId}`);
-    } else if (status === "failed") {
-      // 分析失败，跳转到首页重试
-      navigate("/");
-    }
+    console.log("Toast clicked, status:", status);
+    // 立即关闭当前 toast，避免重复点击
     t.dismiss(`processing-${knowledgeId}`);
+
+    // 使用微任务确保 DOM 更新后再导航
+    setTimeout(() => {
+      if (status === "processing") {
+        // 跳转到分析进度页面，显示AI分析进度
+        navigate(`/progress?knowledgeId=${knowledgeId}&content=${encodeURIComponent(content)}`);
+      } else if (status === "completed") {
+        // 跳转到分析页面
+        navigate(`/analyze?id=${knowledgeId}`);
+      } else if (status === "failed") {
+        // 分析失败，跳转到首页重试
+        navigate("/");
+      }
+    }, 0);
   };
 
   const getStatusEmoji = () => {
@@ -159,7 +165,6 @@ export function ProcessingToast({ knowledgeId, content, t }: ProcessingToastProp
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log("Toast clicked, status:", status);
         handleClick();
       }}
       className={`flex items-center p-4 border rounded-lg shadow-lg cursor-pointer hover:opacity-90 transition-all max-w-sm min-w-[300px] ${getStatusColor()} hover:scale-105 active:scale-95`}

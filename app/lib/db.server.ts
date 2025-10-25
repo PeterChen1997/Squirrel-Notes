@@ -176,6 +176,23 @@ export async function initDatabase() {
     }
 
     console.log("数据库初始化完成");
+
+    // 检查是否需要估算学习时长
+    try {
+      const result = await pool.query(
+        `SELECT COUNT(*) as count FROM knowledge_points WHERE study_duration_minutes IS NULL OR study_duration_minutes = 0`
+      );
+
+      const countWithoutDuration = parseInt(result.rows[0].count);
+      if (countWithoutDuration > 0) {
+        console.log(`📊 发现 ${countWithoutDuration} 个知识点需要估算学习时长，开始迁移...`);
+        await estimateAllKnowledgePointsDuration();
+        await updateAllTopicsLearningTime();
+        console.log("✅ 学习时长迁移完成");
+      }
+    } catch (error) {
+      console.error("⚠️ 学习时长迁移失败:", error);
+    }
   } catch (error) {
     console.error("数据库初始化失败:", error);
     throw error;
@@ -215,6 +232,9 @@ export interface LearningTopic {
   name: string;
   description?: string;
   ai_summary?: string;
+  total_learning_minutes?: number; // 总学习时长（分钟）
+  first_study_at?: Date; // 首次学习时间
+  last_study_at?: Date; // 最后学习时间
   user_id?: string;
   is_demo?: boolean;
   created_at?: Date;
@@ -248,6 +268,7 @@ export interface KnowledgePoint {
   related_ids: string[];
   attachments: MediaAttachment[];
   processing_status: string;
+  study_duration_minutes?: number; // 学习时长（分钟）
   user_id?: string;
   is_demo?: boolean;
   created_at?: Date;
@@ -483,8 +504,8 @@ export async function createKnowledgePoint(
   point: Omit<KnowledgePoint, "id" | "created_at" | "updated_at" | "tags">
 ) {
   const result = await pool.query(
-    `INSERT INTO knowledge_points (title, content, summary, tag_ids, keywords, importance, confidence, learning_topic_id, related_ids, attachments, processing_status, user_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    `INSERT INTO knowledge_points (title, content, summary, tag_ids, keywords, importance, confidence, learning_topic_id, related_ids, attachments, processing_status, study_duration_minutes, user_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      RETURNING *`,
     [
       point.title,
@@ -498,6 +519,7 @@ export async function createKnowledgePoint(
       JSON.stringify(point.related_ids),
       JSON.stringify(point.attachments),
       point.processing_status,
+      point.study_duration_minutes || 0,
       point.user_id,
     ]
   );
@@ -684,6 +706,120 @@ export async function updateKnowledgePoint(
   }
 
   return knowledgePoint;
+}
+
+// === 学习时长管理函数 ===
+
+// 更新知识点学习时长
+export async function updateKnowledgePointStudyDuration(
+  knowledgePointId: string,
+  durationMinutes: number
+) {
+  const result = await pool.query(
+    `UPDATE knowledge_points
+     SET study_duration_minutes = $1, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $2
+     RETURNING *`,
+    [durationMinutes, knowledgePointId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new Error("知识点不存在");
+  }
+
+  const knowledgePoint = result.rows[0] as KnowledgePoint;
+
+  // 如果知识点关联了主题，更新主题的总学习时长
+  if (knowledgePoint.learning_topic_id) {
+    await updateTopicLearningTime(knowledgePoint.learning_topic_id);
+  }
+
+  return knowledgePoint;
+}
+
+// 更新主题的总学习时长和时间范围
+export async function updateTopicLearningTime(topicId: string) {
+  // 计算该主题下所有知识点的总学习时长和时间范围
+  const result = await pool.query(
+    `SELECT
+       COALESCE(SUM(study_duration_minutes), 0) as total_minutes,
+       MIN(created_at) as first_study_at,
+       MAX(created_at) as last_study_at,
+       COUNT(*) as knowledge_count
+     FROM knowledge_points
+     WHERE learning_topic_id = $1`,
+    [topicId]
+  );
+
+  if (result.rows.length > 0) {
+    const { total_minutes, first_study_at, last_study_at } = result.rows[0];
+
+    await pool.query(
+      `UPDATE learning_topics
+       SET
+         total_learning_minutes = $1,
+         first_study_at = $2,
+         last_study_at = $3,
+         updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4`,
+      [total_minutes, first_study_at, last_study_at, topicId]
+    );
+  }
+}
+
+// 估算学习时长（基于内容长度和复杂度）
+export function estimateStudyDuration(content: string): number {
+  const contentLength = content.length;
+
+  // 基础时长估算逻辑
+  if (contentLength < 100) {
+    return 5; // 短内容，5分钟
+  } else if (contentLength < 300) {
+    return 10; // 中等偏短，10分钟
+  } else if (contentLength < 600) {
+    return 20; // 中等长度，20分钟
+  } else if (contentLength < 1000) {
+    return 30; // 较长内容，30分钟
+  } else {
+    // 长内容，每200字符增加5分钟，最大60分钟
+    return Math.min(60, 30 + Math.floor((contentLength - 1000) / 200) * 5);
+  }
+}
+
+
+// 为所有没有学习时长的知识点估算时长
+export async function estimateAllKnowledgePointsDuration() {
+  const result = await pool.query(
+    `SELECT id, content, study_duration_minutes
+     FROM knowledge_points
+     WHERE study_duration_minutes IS NULL OR study_duration_minutes = 0`
+  );
+
+  console.log(`找到 ${result.rows.length} 个需要估算学习时长的知识点`);
+
+  for (const point of result.rows) {
+    try {
+      const estimatedMinutes = estimateStudyDuration(point.content || "");
+      await updateKnowledgePointStudyDuration(point.id, estimatedMinutes);
+      console.log(`知识点 ${point.id} 估算学习时长: ${estimatedMinutes} 分钟`);
+    } catch (error) {
+      console.error(`估算知识点 ${point.id} 学习时长失败:`, error);
+    }
+  }
+}
+
+// 批量更新所有主题的学习时长（用于数据迁移）
+export async function updateAllTopicsLearningTime() {
+  const topicsResult = await pool.query("SELECT id FROM learning_topics");
+
+  for (const topic of topicsResult.rows) {
+    try {
+      await updateTopicLearningTime(topic.id);
+      console.log(`已更新主题 ${topic.id} 的学习时长`);
+    } catch (error) {
+      console.error(`更新主题 ${topic.id} 学习时长失败:`, error);
+    }
+  }
 }
 
 // 搜索知识点
@@ -907,6 +1043,50 @@ async function migrateDatabase() {
         ALTER TABLE learning_topics ADD COLUMN ai_summary TEXT;
       `);
       console.log("已添加 ai_summary 字段到 learning_topics 表");
+    }
+
+    // 添加学习时长相关字段
+    // 为 learning_topics 表添加 total_learning_minutes 字段
+    const totalLearningMinutesColumn = await pool.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'learning_topics' AND column_name = 'total_learning_minutes'
+    `);
+    if (totalLearningMinutesColumn.rows.length === 0) {
+      await pool.query(`
+        ALTER TABLE learning_topics
+        ADD COLUMN total_learning_minutes INTEGER DEFAULT 0
+      `);
+      console.log("添加 total_learning_minutes 字段到 learning_topics 表");
+    }
+
+    // 为 learning_topics 表添加 first_study_at 和 last_study_at 字段
+    const firstStudyAtColumn = await pool.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'learning_topics' AND column_name = 'first_study_at'
+    `);
+    if (firstStudyAtColumn.rows.length === 0) {
+      await pool.query(`
+        ALTER TABLE learning_topics
+        ADD COLUMN first_study_at TIMESTAMP WITH TIME ZONE,
+        ADD COLUMN last_study_at TIMESTAMP WITH TIME ZONE
+      `);
+      console.log("添加 first_study_at 和 last_study_at 字段到 learning_topics 表");
+    }
+
+    // 为 knowledge_points 表添加 study_duration_minutes 字段
+    const studyDurationColumn = await pool.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'knowledge_points' AND column_name = 'study_duration_minutes'
+    `);
+    if (studyDurationColumn.rows.length === 0) {
+      await pool.query(`
+        ALTER TABLE knowledge_points
+        ADD COLUMN study_duration_minutes INTEGER DEFAULT 0
+      `);
+      console.log("添加 study_duration_minutes 字段到 knowledge_points 表");
     }
 
     // 删除 categories 列（如果存在）
